@@ -228,7 +228,7 @@ export default function ShowroomApp() {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="text-slate-300">${p.time}</td>
-        <td class="font-semibold text-white">${p.notes || "মধু বন মাল ক্রয়"}</td>
+        <td class="font-semibold text-white">${p.notes || "DSP মাল ক্রয়"}</td>
         <td class="font-bold text-lg text-blue-400">৳${p.amount.toFixed(2)}</td>
         <td class="text-right">
           <button data-action="delete" data-id="${p.id}" class="btn-danger">🗑️</button>
@@ -362,9 +362,9 @@ export default function ShowroomApp() {
       {/* HEADER */}
       <header className="app-header">
         <div className="header-brand">
-          <span className="brand-badge">মধুবন</span>
-          <h1 className="text-xl font-bold tracking-tight text-white">মধুবন শোরুম</h1>
-          <span className="text-xs text-amber-300 font-semibold hidden sm:inline">মিষ্টি ও বেকারি ePOS</span>
+          <span className="brand-badge">DSP</span>
+          <h1 className="text-xl font-bold tracking-tight text-white">ডিজিটাল সার্ভিস পয়েন্ট</h1>
+          <span className="text-xs text-amber-300 font-semibold hidden sm:inline">DSP ePOS</span>
         </div>
 
         <div className="header-actions">

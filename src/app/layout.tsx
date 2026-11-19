@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "মধুবন শোরুম - ePOS ও দৈনিক স্টক খতিয়ান",
-  description: "মধুবন শোরুম মিষ্টি ও বেকারি সেলস কাউন্টার এবং দৈনিক ক্রয়-বিক্রয় ও স্টক হিসাব",
+  title: "ডিজিটাল সার্ভিস পয়েন্ট - DSP ePOS ও দৈনিক স্টক খতিয়ান",
+  description: "ডিজিটাল সার্ভিস পয়েন্ট সেলস কাউন্টার এবং দৈনিক ক্রয়-বিক্রয় ও স্টক হিসাব",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon.svg",
