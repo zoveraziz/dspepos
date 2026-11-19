@@ -67,12 +67,12 @@ function doPost(e) {
     if (request.action === "CLEAR_ALL_DATA") {
       var currentLogLastRow = logSheet.getLastRow();
       if (currentLogLastRow > 1) {
-        logSheet.deleteRows(2, currentLogLastRow - 1);
+        logSheet.getRange(2, 1, currentLogLastRow - 1, 8).clearContent();
       }
 
       var currentSummaryLastRow = summarySheet.getLastRow();
       if (currentSummaryLastRow > 1) {
-        summarySheet.deleteRows(2, currentSummaryLastRow - 1);
+        summarySheet.getRange(2, 1, currentSummaryLastRow - 1, 6).clearContent();
       }
 
       return ContentService.createTextOutput(
@@ -88,7 +88,39 @@ function doPost(e) {
     if (request.action === "BATCH_SYNC") {
       var mutations = request.mutations || [];
 
-      // ১. ডিলিট লিস্ট এবং ইনসার্ট/আপডেট আলাদা করা
+      // ১. রিড-অনলি সিঙ্ক (যদি কোনো নতুন এন্ট্রি না থাকে): শিট স্পর্শ করবে না, ০ মিলি-সেকেন্ড রেসপন্স, নো ব্লিংকিং
+      if (mutations.length === 0) {
+        var logDataRange = logSheet.getDataRange();
+        var logValues = logDataRange.getDisplayValues();
+        var allServerRecords = [];
+        for (var r = 1; r < logValues.length; r++) {
+          var row = logValues[r];
+          var rowId = String(row[0] || "").trim();
+          if (!rowId || rowId === "undefined" || rowId === "null") continue;
+          allServerRecords.push({
+            id: rowId,
+            date: String(row[1] || ""),
+            time: String(row[2] || ""),
+            type: row[3] === "মাল ক্রয়" ? "PURCHASE" : "SALE",
+            amount: Number(row[4]) || 0,
+            serial_no: Number(row[5]) || 0,
+            notes: String(row[6] || ""),
+            created_at: String(row[7] || now),
+            updated_at: String(row[7] || now),
+            is_deleted: 0
+          });
+        }
+
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: true,
+            serverTime: now,
+            serverChanges: allServerRecords
+          })
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      // ২. ডিলিট লিস্ট এবং ইনসার্ট/আপডেট আলাদা করা
       var deleteIds = {};
       var upsertMap = {};
 
@@ -109,7 +141,7 @@ function doPost(e) {
         }
       });
 
-      // ২. পূর্বের সব ডাটা পড়া (getDisplayValues নিশ্চিত করে তারিখ ও সময় স্ট্রিং আকারে হুবহু থাকবে)
+      // ৩. পূর্বের সব ডাটা পড়া
       var logDataRange = logSheet.getDataRange();
       var logValues = logDataRange.getDisplayValues();
       var keptRows = [];
@@ -124,7 +156,7 @@ function doPost(e) {
           continue;
         }
 
-        // যদি এই আইডিটি অ্যাপে ডিলিট হয়ে থাকে, তাহলে এটিকে গুগল শিট থেকেও সম্পূর্ণ বাদ দেওয়া হবে
+        // যদি এই আইডিটি অ্যাপে ডিলিট হয়ে থাকে, তাহলে এটিকে গুগল শিট থেকেও বাদ দেওয়া হবে
         if (deleteIds[rowId]) {
           continue;
         }
@@ -158,7 +190,7 @@ function doPost(e) {
         }
       }
 
-      // ৩. নতুন ইনসার্ট হওয়া এন্ট্রিগুলো যোগ করা
+      // ৪. নতুন ইনসার্ট হওয়া এন্ট্রিগুলো যোগ করা
       Object.keys(upsertMap).forEach(function(newId) {
         if (!handledIds[newId] && !deleteIds[newId] && newId && newId !== "undefined" && newId !== "null") {
           var p = upsertMap[newId];
@@ -179,17 +211,17 @@ function doPost(e) {
         }
       });
 
-      // ৪. "লেনদেন_বিস্তারিত" শিট সম্পূর্ণ আপডেট করা (ডিলিট হওয়া রো একদম মুছে যাবে)
+      // ৫. "লেনদেন_বিস্তারিত" শিট স্মুথলি আপডেট করা (ইন-প্লেস ক্লিয়ার, নো রো ডিলিশন, নো ব্লিংকিং)
       var currentLogLastRow = logSheet.getLastRow();
       if (currentLogLastRow > 1) {
-        logSheet.deleteRows(2, currentLogLastRow - 1);
+        logSheet.getRange(2, 1, currentLogLastRow - 1, 8).clearContent();
       }
 
       if (keptRows.length > 0) {
         logSheet.getRange(2, 1, keptRows.length, 8).setValues(keptRows);
       }
 
-      // ৫. "দৈনিক_ক্রয়_বিক্রয়_স্টক" শিট স্বয়ংক্রিয়ভাবে পুনরায় হিসাব করা
+      // ৬. "দৈনিক_ক্রয়_বিক্রয়_স্টক" শিট স্বয়ংক্রিয়ভাবে পুনরায় হিসাব করা
       var dateMap = {};
 
       keptRows.forEach(function(row) {
@@ -229,7 +261,7 @@ function doPost(e) {
 
       var currentSummaryLastRow = summarySheet.getLastRow();
       if (currentSummaryLastRow > 1) {
-        summarySheet.deleteRows(2, currentSummaryLastRow - 1);
+        summarySheet.getRange(2, 1, currentSummaryLastRow - 1, 6).clearContent();
       }
 
       if (summaryRows.length > 0) {

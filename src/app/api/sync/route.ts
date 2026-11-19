@@ -6,10 +6,13 @@ function normalizeDate(d: any): string {
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
   const dateObj = new Date(str);
   if (!isNaN(dateObj.getTime())) {
-    const y = dateObj.getFullYear();
-    const m = String(dateObj.getMonth() + 1).padStart(2, "0");
-    const day = String(dateObj.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
+    const fmt = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Dhaka",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    return fmt.format(dateObj);
   }
   return str;
 }
@@ -20,7 +23,13 @@ function normalizeTime(t: any): string {
   if (/^\d{1,2}:\d{2}(:\d{2})?(\s?[AP]M)?$/i.test(str)) return str;
   const d = new Date(str);
   if (!isNaN(d.getTime())) {
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    return d.toLocaleTimeString("en-US", {
+      timeZone: "Asia/Dhaka",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
   }
   return str;
 }
