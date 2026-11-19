@@ -34,10 +34,10 @@ class PrintBridge {
           .alignCenter()
           .bold(true)
           .doubleSize(true)
-          .text("মধু বন")
+          .text("ডিজিটাল সার্ভিস পয়েন্ট")
           .doubleSize(false)
           .bold(false)
-          .text("মিষ্টি ও বেকারি শোরুম")
+          .text("DSP ePOS সেলস রসিদ")
           .line("=")
           .alignLeft()
           .twoColumn(`কাস্টমার নং: #${record.serial_no}`, record.time)
@@ -80,8 +80,8 @@ class PrintBridge {
 
     mount.innerHTML = `
       <div class="print-receipt-container">
-        <div class="text-center font-bold text-xl">মধু বন</div>
-        <div class="text-center text-xs">মিষ্টি ও বেকারি শোরুম</div>
+        <div class="text-center font-bold text-xl">ডিজিটাল সার্ভিস পয়েন্ট</div>
+        <div class="text-center text-xs">DSP ePOS সেলস রসিদ</div>
         <div class="print-divider">================================</div>
         <div class="flex-between"><span>কাস্টমার নং:</span><span class="font-bold">#${record.serial_no}</span></div>
         <div class="flex-between"><span>তারিখ:</span><span>${record.date}</span></div>
