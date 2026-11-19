@@ -174,18 +174,23 @@ class DatabaseManager {
           const sql = st.sql.trim();
           if (sql.startsWith("INSERT INTO transactions")) {
             const p = st.params!;
-            tx.objectStore("transactions").put({
-              id: p[0],
-              date: p[1],
-              time: p[2],
-              type: p[3],
-              amount: p[4],
-              serial_no: p[5],
-              notes: p[6] || "",
-              created_at: p[7] || new Date().toISOString(),
-              updated_at: p[8] || new Date().toISOString(),
-              is_deleted: 0,
-            });
+            const amt = Number(p[4]) || 0;
+            const dateStr = String(p[1] || "").trim();
+            // Protect local store: never overwrite with 0 or missing date
+            if (amt > 0 && dateStr.length >= 8) {
+              tx.objectStore("transactions").put({
+                id: p[0],
+                date: p[1],
+                time: p[2],
+                type: p[3],
+                amount: amt,
+                serial_no: Number(p[5]) || 0,
+                notes: p[6] || "",
+                created_at: p[7] || new Date().toISOString(),
+                updated_at: p[8] || new Date().toISOString(),
+                is_deleted: 0,
+              });
+            }
           } else if (sql.startsWith("INSERT INTO sync_outbox")) {
             const p = st.params!;
             tx.objectStore("sync_outbox").put({
@@ -462,12 +467,18 @@ class DatabaseManager {
     const statements: DbTransactionStatement[] = [];
 
     for (const item of serverRecords) {
+      if (!item) continue;
       if (item.is_deleted) {
         statements.push({
           sql: `UPDATE transactions SET is_deleted = 1, updated_at = ? WHERE id = ?`,
           params: [item.updated_at, item.id],
         });
       } else {
+        const amt = Number(item.amount) || 0;
+        const dateStr = String(item.date || "").trim();
+        // Never allow invalid/empty server entries to overwrite valid local data
+        if (amt <= 0 || !dateStr || dateStr.length < 8) continue;
+
         statements.push({
           sql: `INSERT INTO transactions (id, date, time, type, amount, serial_no, notes, created_at, updated_at, is_deleted)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
@@ -482,10 +493,10 @@ class DatabaseManager {
                 WHERE excluded.updated_at > transactions.updated_at`,
           params: [
             String(item.id || crypto.randomUUID()),
-            String(item.date || this.getTodayDateString()),
+            dateStr,
             String(item.time || "00:00:00"),
             String(item.type || "SALE"),
-            Number(item.amount) || 0,
+            amt,
             Number(item.serial_no) || 0,
             String(item.notes || ""),
             String(item.created_at || item.updated_at || new Date().toISOString()),
