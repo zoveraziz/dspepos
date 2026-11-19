@@ -1,0 +1,18 @@
+{
+  "name": "DSP ePOS - Offline-First Point of Sale",
+  "short_name": "DSP ePOS",
+  "description": "Ultra-fast Offline-First Point of Sale powered by in-browser SQLite and Google Sheets sync",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
