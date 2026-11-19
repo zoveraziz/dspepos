@@ -51,6 +51,11 @@ export default function ShowroomApp() {
       const saved = (localStorage.getItem("dsp_epos_theme") as "dark" | "light") || "dark";
       setTheme(saved);
       document.documentElement.setAttribute("data-theme", saved);
+      if (saved === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
     } catch {}
   }, []);
 
@@ -58,6 +63,11 @@ export default function ShowroomApp() {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
     document.documentElement.setAttribute("data-theme", next);
+    if (next === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
     try {
       localStorage.setItem("dsp_epos_theme", next);
     } catch {}
