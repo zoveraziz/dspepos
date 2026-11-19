@@ -109,9 +109,9 @@ function doPost(e) {
         }
       });
 
-      // ২. পূর্বের সব ডাটা পড়া
+      // ২. পূর্বের সব ডাটা পড়া (getDisplayValues নিশ্চিত করে তারিখ ও সময় স্ট্রিং আকারে হুবহু থাকবে)
       var logDataRange = logSheet.getDataRange();
-      var logValues = logDataRange.getValues();
+      var logValues = logDataRange.getDisplayValues();
       var keptRows = [];
       var handledIds = {};
 

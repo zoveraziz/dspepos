@@ -1,5 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 
+function normalizeDate(d: any): string {
+  if (!d) return "";
+  const str = String(d).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  const dateObj = new Date(str);
+  if (!isNaN(dateObj.getTime())) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+  return str;
+}
+
+function normalizeTime(t: any): string {
+  if (!t) return "00:00:00";
+  const str = String(t).trim();
+  if (/^\d{1,2}:\d{2}(:\d{2})?(\s?[AP]M)?$/i.test(str)) return str;
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+  return str;
+}
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
@@ -23,11 +48,14 @@ export async function POST(req: NextRequest) {
             break;
           }
         }
+        p = p || {};
+        if (p.date) p.date = normalizeDate(p.date);
+        if (p.time) p.time = normalizeTime(p.time);
         return {
           mutation_id: String(m.mutation_id || ""),
           record_id: String(m.record_id || ""),
           action: m.action || "INSERT",
-          payload: p || {},
+          payload: p,
         };
       });
     }
@@ -56,15 +84,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Filter out any corrupted/empty ghost records from serverChanges so client state is never corrupted
+    // Filter and normalize serverChanges so dates are strictly YYYY-MM-DD
     if (data && Array.isArray(data.serverChanges)) {
-      data.serverChanges = data.serverChanges.filter((item: any) => {
-        if (!item) return false;
-        if (item.is_deleted) return true;
-        const amt = Number(item.amount) || 0;
-        const date = String(item.date || "").trim();
-        return amt > 0 && date.length >= 8;
-      });
+      data.serverChanges = data.serverChanges
+        .map((item: any) => {
+          if (!item) return null;
+          const cleanDate = normalizeDate(item.date);
+          const cleanTime = normalizeTime(item.time);
+          return {
+            ...item,
+            date: cleanDate,
+            time: cleanTime,
+            amount: Number(item.amount) || 0,
+            serial_no: Number(item.serial_no) || 0,
+          };
+        })
+        .filter((item: any) => {
+          if (!item) return false;
+          if (item.is_deleted) return true;
+          return item.amount > 0 && item.date && item.date.length === 10;
+        });
     }
 
     return NextResponse.json(data);

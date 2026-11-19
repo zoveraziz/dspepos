@@ -1,6 +1,31 @@
 import { TransactionRecord, DailySummaryRow, SyncMutation, DbTransactionStatement } from "./types";
 import { DB_SCHEMA_SQL } from "./schema";
 
+function normalizeDate(d: any): string {
+  if (!d) return "";
+  const str = String(d).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  const dateObj = new Date(str);
+  if (!isNaN(dateObj.getTime())) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+  return str;
+}
+
+function normalizeTime(t: any): string {
+  if (!t) return "00:00:00";
+  const str = String(t).trim();
+  if (/^\d{1,2}:\d{2}(:\d{2})?(\s?[AP]M)?$/i.test(str)) return str;
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+  return str;
+}
+
 class DatabaseManager {
   private worker: Worker | null = null;
   private dbId: string | null = null;
@@ -475,9 +500,10 @@ class DatabaseManager {
         });
       } else {
         const amt = Number(item.amount) || 0;
-        const dateStr = String(item.date || "").trim();
+        const dateStr = normalizeDate(item.date);
+        const timeStr = normalizeTime(item.time);
         // Never allow invalid/empty server entries to overwrite valid local data
-        if (amt <= 0 || !dateStr || dateStr.length < 8) continue;
+        if (amt <= 0 || !dateStr || dateStr.length !== 10) continue;
 
         statements.push({
           sql: `INSERT INTO transactions (id, date, time, type, amount, serial_no, notes, created_at, updated_at, is_deleted)
@@ -494,7 +520,7 @@ class DatabaseManager {
           params: [
             String(item.id || crypto.randomUUID()),
             dateStr,
-            String(item.time || "00:00:00"),
+            timeStr,
             String(item.type || "SALE"),
             amt,
             Number(item.serial_no) || 0,
