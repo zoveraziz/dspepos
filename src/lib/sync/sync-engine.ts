@@ -82,17 +82,19 @@ class SyncEngine {
         action: "BATCH_SYNC",
         lastSyncTime: this.lastSyncTime,
         mutations: pendingMutations.map((m) => {
-          let parsedPayload: any = {};
-          try {
-            parsedPayload = typeof m.payload === "string" ? JSON.parse(m.payload) : (m.payload || {});
-          } catch {
-            parsedPayload = m.payload || {};
+          let parsedPayload: any = m.payload;
+          while (typeof parsedPayload === "string") {
+            try {
+              parsedPayload = JSON.parse(parsedPayload);
+            } catch {
+              break;
+            }
           }
           return {
             mutation_id: m.mutation_id,
             record_id: m.record_id,
             action: m.action,
-            payload: parsedPayload,
+            payload: parsedPayload || {},
           };
         }),
       };

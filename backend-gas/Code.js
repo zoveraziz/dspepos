@@ -97,7 +97,15 @@ function doPost(e) {
         if (m.action === "DELETE") {
           deleteIds[recId] = true;
         } else {
-          upsertMap[recId] = m.payload;
+          var payload = m.payload;
+          while (typeof payload === "string") {
+            try {
+              payload = JSON.parse(payload);
+            } catch (e) {
+              break;
+            }
+          }
+          upsertMap[recId] = payload || {};
         }
       });
 
@@ -154,6 +162,10 @@ function doPost(e) {
       Object.keys(upsertMap).forEach(function(newId) {
         if (!handledIds[newId] && !deleteIds[newId] && newId && newId !== "undefined" && newId !== "null") {
           var p = upsertMap[newId];
+          while (typeof p === "string") {
+            try { p = JSON.parse(p); } catch (e) { break; }
+          }
+          p = p || {};
           keptRows.push([
             newId,
             String(p.date || ""),
