@@ -391,6 +391,27 @@ export default function ShowroomApp() {
     }
   };
 
+  const handleForceUpdate = async () => {
+    try {
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const reg of regs) {
+          await reg.unregister();
+        }
+      }
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        for (const key of keys) {
+          await caches.delete(key);
+        }
+      }
+      localStorage.removeItem("madhuban_last_sync_time");
+      window.location.href = window.location.origin + "/?v=" + Date.now();
+    } catch {
+      window.location.reload();
+    }
+  };
+
   const handleClearAllData = async () => {
     const ok = confirm("⚠️ আপনি কি নিশ্চিত যে সমস্ত পরীক্ষামূলক বিক্রি ও ক্রয়ের হিসাব মুছে ফেলে সিস্টেম একদম ফ্রেশ ও নতুন করতে চান?");
     if (!ok) return;
@@ -774,6 +795,21 @@ export default function ShowroomApp() {
                 </li>
                 <li>পাওয়া লিংকটি উপরের বক্সে পেস্ট করে সেভ করুন।</li>
               </ol>
+            </div>
+
+            {/* Force Update & Cache Reset */}
+            <div className="table-card p-6 border-l-4 border-amber-500 space-y-3">
+              <h3 className="font-bold text-amber-400">⚡ নতুন ভার্সন আপডেট ও ক্যাশ রিফ্রেশ</h3>
+              <p className="text-xs text-slate-400">
+                মোবাইল বা পিসিতে পুরোনো ক্যাশের কারণে সিঙ্ক আটকে থাকলে নিচের বাটনে চাপ দিন। এটি ব্রাউজারের পুরোনো ফাইল মুছে সরাসরি লেটেস্ট ভার্সন লোড করবে।
+              </p>
+              <button
+                type="button"
+                onClick={handleForceUpdate}
+                className="btn-secondary cursor-pointer px-4 py-2 text-sm font-bold text-amber-300 border-amber-500"
+              >
+                🔄 ব্রাউজার ক্যাশ ক্লিয়ার ও লেটেস্ট আপডেট নিন
+              </button>
             </div>
 
             {/* Fresh Reset Danger Zone */}
