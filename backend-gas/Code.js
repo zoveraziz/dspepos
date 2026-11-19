@@ -96,6 +96,14 @@ function doPost(e) {
       logSheet.setFrozenRows(1);
     }
 
+    // নিশ্চিত করা যাতে শিটে পর্যাপ্ত খালি রো থাকে এবং "Add 1000 rows" ডায়লগ উপরে না আসে
+    if (logSheet.getMaxRows() < 100) {
+      logSheet.insertRowsAfter(logSheet.getMaxRows(), 500);
+    }
+    if (summarySheet.getMaxRows() < 100) {
+      summarySheet.insertRowsAfter(summarySheet.getMaxRows(), 500);
+    }
+
     var now = new Date().toISOString();
 
     // ১. সম্পূর্ণ ডাটা ক্লিয়ার করার কমান্ড
