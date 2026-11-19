@@ -219,6 +219,7 @@ function doPost(e) {
           amount: Number(row[4]) || 0,
           serial_no: Number(row[5]) || 0,
           notes: String(row[6] || ""),
+          created_at: String(row[7] || now),
           updated_at: String(row[7] || now),
           is_deleted: 0
         };

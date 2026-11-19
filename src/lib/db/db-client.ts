@@ -181,9 +181,9 @@ class DatabaseManager {
               type: p[3],
               amount: p[4],
               serial_no: p[5],
-              notes: p[6],
-              created_at: p[7],
-              updated_at: p[8],
+              notes: p[6] || "",
+              created_at: p[7] || new Date().toISOString(),
+              updated_at: p[8] || new Date().toISOString(),
               is_deleted: 0,
             });
           } else if (sql.startsWith("INSERT INTO sync_outbox")) {
@@ -481,15 +481,15 @@ class DatabaseManager {
                   updated_at = excluded.updated_at
                 WHERE excluded.updated_at > transactions.updated_at`,
           params: [
-            item.id,
-            item.date,
-            item.time,
-            item.type,
-            item.amount,
-            item.serial_no,
-            item.notes || "",
-            item.created_at,
-            item.updated_at,
+            String(item.id || crypto.randomUUID()),
+            String(item.date || this.getTodayDateString()),
+            String(item.time || "00:00:00"),
+            String(item.type || "SALE"),
+            Number(item.amount) || 0,
+            Number(item.serial_no) || 0,
+            String(item.notes || ""),
+            String(item.created_at || item.updated_at || new Date().toISOString()),
+            String(item.updated_at || new Date().toISOString()),
           ],
         });
       }

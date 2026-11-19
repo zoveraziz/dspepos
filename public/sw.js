@@ -1,5 +1,5 @@
-// মধুবন শোরুম ePOS Service Worker
-const CACHE_VERSION = "madhuban-epos-v2.0.0";
+// ডিজিটাল সার্ভিস পয়েন্ট DSP ePOS Service Worker
+const CACHE_VERSION = "dsp-epos-v2.1.0";
 const PRECACHE_ASSETS = [
   "/",
   "/manifest.json",

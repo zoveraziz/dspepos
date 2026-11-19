@@ -81,15 +81,25 @@ class SyncEngine {
       const requestPayload = {
         action: "BATCH_SYNC",
         lastSyncTime: this.lastSyncTime,
-        mutations: pendingMutations.map((m) => ({
-          mutation_id: m.mutation_id,
-          record_id: m.record_id,
-          action: m.action,
-          payload: JSON.parse(m.payload),
-        })),
+        mutations: pendingMutations.map((m) => {
+          let parsedPayload: any = {};
+          try {
+            parsedPayload = typeof m.payload === "string" ? JSON.parse(m.payload) : (m.payload || {});
+          } catch {
+            parsedPayload = m.payload || {};
+          }
+          return {
+            mutation_id: m.mutation_id,
+            record_id: m.record_id,
+            action: m.action,
+            payload: parsedPayload,
+          };
+        }),
       };
 
       let data: any = null;
+      let errorMsg = "";
+
       try {
         const proxyRes = await fetch("/api/sync", {
           method: "POST",
@@ -101,18 +111,30 @@ class SyncEngine {
         });
         if (proxyRes.ok) {
           data = await proxyRes.json();
+        } else {
+          try {
+            const errJson = await proxyRes.json();
+            errorMsg = errJson.error || `HTTP ${proxyRes.status}`;
+          } catch {
+            errorMsg = `HTTP ${proxyRes.status}`;
+          }
         }
-      } catch (proxyErr) {
-        console.warn("[SyncEngine] Proxy error, trying direct fetch", proxyErr);
+      } catch (proxyErr: any) {
+        console.warn("[SyncEngine] Proxy fetch error:", proxyErr);
+        errorMsg = proxyErr?.message || "Proxy request failed";
       }
 
-      if (!data) {
-        const res = await fetch(this.endpointUrl, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(requestPayload),
-        });
-        data = await res.json();
+      if (!data && this.endpointUrl) {
+        try {
+          const res = await fetch(this.endpointUrl, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(requestPayload),
+          });
+          data = await res.json();
+        } catch (directErr) {
+          console.warn("[SyncEngine] Direct fetch fallback failed:", directErr);
+        }
       }
 
       if (data && data.success) {
@@ -132,7 +154,8 @@ class SyncEngine {
         this.emit("synced", `গুগল শিটে সিঙ্ক সম্পন্ন (${pendingMutations.length} এন্ট্রি)`);
         return true;
       } else {
-        this.emit("error", data.error || "সিঙ্ক এরর");
+        const finalError = data?.error || errorMsg || "সিঙ্ক এরর";
+        this.emit("error", finalError);
         return false;
       }
     } catch (err: any) {
