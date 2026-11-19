@@ -319,7 +319,7 @@ function doPost(e) {
           keptRows[k][5] = currentSeq; // কাস্টমার নং (serial_no)
           
           var noteVal = String(keptRows[k][6] || "").trim();
-          if (!noteVal || /^কাস্টমার\s*#?\d*$/i.test(noteVal)) {
+          if (!noteVal || noteVal.indexOf("কাস্টমার") === 0) {
             keptRows[k][6] = "কাস্টমার #" + currentSeq;
           }
         }
