@@ -43,6 +43,26 @@ export default function ShowroomApp() {
   // In-memory cache for fast search & offline access
   const todaySalesCacheRef = useRef<TransactionRecord[]>([]);
 
+  // Theme Mode (Dark / Light)
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    try {
+      const saved = (localStorage.getItem("dsp_epos_theme") as "dark" | "light") || "dark";
+      setTheme(saved);
+      document.documentElement.setAttribute("data-theme", saved);
+    } catch {}
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.documentElement.setAttribute("data-theme", next);
+    try {
+      localStorage.setItem("dsp_epos_theme", next);
+    } catch {}
+  };
+
   useEffect(() => {
     // Unregister stale service workers in dev
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
@@ -368,6 +388,15 @@ export default function ShowroomApp() {
         </div>
 
         <div className="header-actions">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="btn-theme-toggle cursor-pointer"
+            title="মোড পরিবর্তন করুন (লাইট / ডার্ক)"
+          >
+            {theme === "dark" ? "☀️ লাইট মোড" : "🌙 ডার্ক মোড"}
+          </button>
+
           <div ref={syncPillRef} className="sync-status-pill" data-status="idle">
             <span className="inline-block w-2 h-2 rounded-full bg-current"></span>
             <span ref={syncMsgRef}>অফলাইন মোড</span>
