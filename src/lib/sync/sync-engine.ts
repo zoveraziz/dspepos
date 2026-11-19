@@ -83,6 +83,20 @@ class SyncEngine {
         lastSyncTime: this.lastSyncTime,
         mutations: pendingMutations.map((m) => {
           let parsedPayload: any = m.payload;
+          let action = m.action;
+
+          // Self-heal: If m.payload is missing/empty and m.action contains JSON string from previous bug
+          if (
+            (!parsedPayload || (typeof parsedPayload === "object" && Object.keys(parsedPayload).length === 0)) &&
+            typeof action === "string" &&
+            (action.startsWith("{") || action.includes("amount"))
+          ) {
+            try {
+              parsedPayload = JSON.parse(action);
+              action = parsedPayload.is_deleted ? "DELETE" : "INSERT";
+            } catch {}
+          }
+
           while (typeof parsedPayload === "string") {
             try {
               parsedPayload = JSON.parse(parsedPayload);
@@ -93,7 +107,7 @@ class SyncEngine {
           return {
             mutation_id: m.mutation_id,
             record_id: m.record_id,
-            action: m.action,
+            action: action || "INSERT",
             payload: parsedPayload || {},
           };
         }),

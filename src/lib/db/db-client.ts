@@ -218,11 +218,22 @@ class DatabaseManager {
             }
           } else if (sql.startsWith("INSERT INTO sync_outbox")) {
             const p = st.params!;
+            let action = "INSERT";
+            let payloadData: any = {};
+
+            if (p.length === 3) {
+              action = sql.includes("'DELETE'") ? "DELETE" : "INSERT";
+              payloadData = p[2];
+            } else if (p.length >= 4) {
+              action = p[2];
+              payloadData = p[3];
+            }
+
             tx.objectStore("sync_outbox").put({
               mutation_id: p[0],
               record_id: p[1],
-              action: p[2],
-              payload: p[3],
+              action,
+              payload: payloadData,
               status: "PENDING",
               retry_count: 0,
               created_at: new Date().toISOString(),

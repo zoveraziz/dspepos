@@ -67,6 +67,20 @@ export async function POST(req: NextRequest) {
       payload.mutations = payload.mutations
         .map((m: any) => {
           let p = m.payload;
+          let act = m.action;
+
+          // Self-heal: If p is missing/empty and m.action is a JSON string
+          if (
+            (!p || (typeof p === "object" && Object.keys(p).length === 0)) &&
+            typeof act === "string" &&
+            (act.startsWith("{") || act.includes("amount"))
+          ) {
+            try {
+              p = JSON.parse(act);
+              act = p.is_deleted ? "DELETE" : "INSERT";
+            } catch {}
+          }
+
           while (typeof p === "string") {
             try {
               p = JSON.parse(p);
@@ -81,7 +95,7 @@ export async function POST(req: NextRequest) {
           return {
             mutation_id: String(m.mutation_id || ""),
             record_id: String(m.record_id || ""),
-            action: m.action || "INSERT",
+            action: act || "INSERT",
             payload: p,
           };
         })
