@@ -64,6 +64,27 @@ function doPost(e) {
 
     var now = new Date().toISOString();
 
+    if (request.action === "CLEAR_ALL_DATA") {
+      var currentLogLastRow = logSheet.getLastRow();
+      if (currentLogLastRow > 1) {
+        logSheet.getRange(2, 1, currentLogLastRow - 1, 8).clearContent();
+      }
+
+      var currentSummaryLastRow = summarySheet.getLastRow();
+      if (currentSummaryLastRow > 1) {
+        summarySheet.getRange(2, 1, currentSummaryLastRow - 1, 6).clearContent();
+      }
+
+      return ContentService.createTextOutput(
+        JSON.stringify({
+          success: true,
+          message: "All data cleared successfully",
+          serverTime: now,
+          serverChanges: []
+        })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (request.action === "BATCH_SYNC") {
       var mutations = request.mutations || [];
 

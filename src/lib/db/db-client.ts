@@ -498,6 +498,21 @@ class DatabaseManager {
     await this.executeTransaction(statements);
   }
 
+  async clearAllData(): Promise<void> {
+    await this.init();
+    if (!this.isFallbackMode && this.worker && this.dbId) {
+      await this.post("exec", { sql: "DELETE FROM transactions; DELETE FROM sync_outbox;" });
+    }
+    if (this.idb) {
+      const tx = this.idb.transaction(["transactions", "sync_outbox"], "readwrite");
+      tx.objectStore("transactions").clear();
+      tx.objectStore("sync_outbox").clear();
+    }
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem("madhuban_last_sync_time");
+    }
+  }
+
   private getTodayDateString(): string {
     const d = new Date();
     const year = d.getFullYear();

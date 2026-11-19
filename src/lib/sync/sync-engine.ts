@@ -143,6 +143,46 @@ class SyncEngine {
       this.isRunning = false;
     }
   }
+
+  async clearRemoteAndLocalData(): Promise<boolean> {
+    this.emit("syncing", "গুগল শিট ও লোকাল ডাটা পরিষ্কার করা হচ্ছে...");
+    try {
+      const requestPayload = {
+        action: "CLEAR_ALL_DATA",
+      };
+
+      try {
+        await fetch("/api/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            endpointUrl: this.endpointUrl,
+            payload: requestPayload,
+          }),
+        });
+      } catch (e) {
+        if (this.endpointUrl) {
+          await fetch(this.endpointUrl, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(requestPayload),
+          });
+        }
+      }
+
+      await dbManager.clearAllData();
+      this.lastSyncTime = "";
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("madhuban_last_sync_time");
+      }
+      this.emit("synced", "ডাটাবেজ ও গুগল শিট সম্পূর্ণ ফ্রেশ করা হয়েছে");
+      return true;
+    } catch (err: any) {
+      console.warn("[SyncEngine] Clear error:", err);
+      this.emit("error", "ডাটা ক্লিয়ার করতে সমস্যা হয়েছে");
+      return false;
+    }
+  }
 }
 
 export const syncEngine = new SyncEngine();

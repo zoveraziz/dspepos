@@ -391,6 +391,20 @@ export default function ShowroomApp() {
     }
   };
 
+  const handleClearAllData = async () => {
+    const ok = confirm("⚠️ আপনি কি নিশ্চিত যে সমস্ত পরীক্ষামূলক বিক্রি ও ক্রয়ের হিসাব মুছে ফেলে সিস্টেম একদম ফ্রেশ ও নতুন করতে চান?");
+    if (!ok) return;
+
+    try {
+      await syncEngine.clearRemoteAndLocalData();
+      todaySalesCacheRef.current = [];
+      await refreshAllData();
+      alert("✓ সমস্ত ডাটা সফলভাবে মুছে ফেলা হয়েছে! সিস্টেম এখন একদম নতুন ও ফ্রেশ।");
+    } catch (err: any) {
+      alert("ডাটা মুছতে সমস্যা হয়েছে: " + err.message);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
       {/* HEADER */}
@@ -760,6 +774,21 @@ export default function ShowroomApp() {
                 </li>
                 <li>পাওয়া লিংকটি উপরের বক্সে পেস্ট করে সেভ করুন।</li>
               </ol>
+            </div>
+
+            {/* Fresh Reset Danger Zone */}
+            <div className="table-card p-6 border-2 border-red-500/40">
+              <h3 className="font-bold text-red-400 mb-1">⚠️ সিস্টেম ফ্রেশ রিসেট (নতুন করে শুরু করুন)</h3>
+              <p className="text-xs text-slate-400 mb-4">
+                টেস্টিংয়ের সময় যোগ করা সমস্ত বিক্রি ও ক্রয়ের হিসাব গুগল শিট এবং লোকাল ডাটাবেজ থেকে পুরোপুরি মুছে সিস্টেম একদম নতুন ও ফ্রেশ করতে নিচের বাটনে চাপ দিন।
+              </p>
+              <button
+                type="button"
+                onClick={handleClearAllData}
+                className="btn-danger cursor-pointer px-4 py-2 text-sm font-bold"
+              >
+                🗑️ সমস্ত পরীক্ষামূলক ডাটা ক্লিয়ার করুন (ফ্রেশ শুরু)
+              </button>
             </div>
           </div>
         )}
