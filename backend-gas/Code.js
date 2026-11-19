@@ -67,12 +67,12 @@ function doPost(e) {
     if (request.action === "CLEAR_ALL_DATA") {
       var currentLogLastRow = logSheet.getLastRow();
       if (currentLogLastRow > 1) {
-        logSheet.getRange(2, 1, currentLogLastRow - 1, 8).clearContent();
+        logSheet.deleteRows(2, currentLogLastRow - 1);
       }
 
       var currentSummaryLastRow = summarySheet.getLastRow();
       if (currentSummaryLastRow > 1) {
-        summarySheet.getRange(2, 1, currentSummaryLastRow - 1, 6).clearContent();
+        summarySheet.deleteRows(2, currentSummaryLastRow - 1);
       }
 
       return ContentService.createTextOutput(
@@ -109,7 +109,12 @@ function doPost(e) {
 
       for (var r = 1; r < logValues.length; r++) {
         var row = logValues[r];
-        var rowId = String(row[0]);
+        var rowId = String(row[0] || "").trim();
+
+        // ফাঁকা রো বা অকার্যকর রো বাদ দেওয়া
+        if (!rowId || rowId === "undefined" || rowId === "null") {
+          continue;
+        }
 
         // যদি এই আইডিটি অ্যাপে ডিলিট হয়ে থাকে, তাহলে এটিকে গুগল শিট থেকেও সম্পূর্ণ বাদ দেওয়া হবে
         if (deleteIds[rowId]) {
@@ -121,33 +126,42 @@ function doPost(e) {
           var up = upsertMap[rowId];
           keptRows.push([
             rowId,
-            up.date,
-            up.time,
+            String(up.date || ""),
+            String(up.time || ""),
             up.type === "SALE" ? "বিক্রি" : "মাল ক্রয়",
-            up.amount,
-            up.serial_no || 0,
-            up.notes || "",
+            Number(up.amount) || 0,
+            Number(up.serial_no) || 0,
+            String(up.notes || ""),
             now
           ]);
           handledIds[rowId] = true;
         } else {
-          keptRows.push(row);
+          keptRows.push([
+            rowId,
+            String(row[1] || ""),
+            String(row[2] || ""),
+            String(row[3] || "বিক্রি"),
+            Number(row[4]) || 0,
+            Number(row[5]) || 0,
+            String(row[6] || ""),
+            String(row[7] || now)
+          ]);
           handledIds[rowId] = true;
         }
       }
 
       // ৩. নতুন ইনসার্ট হওয়া এন্ট্রিগুলো যোগ করা
       Object.keys(upsertMap).forEach(function(newId) {
-        if (!handledIds[newId] && !deleteIds[newId]) {
+        if (!handledIds[newId] && !deleteIds[newId] && newId && newId !== "undefined" && newId !== "null") {
           var p = upsertMap[newId];
           keptRows.push([
             newId,
-            p.date,
-            p.time,
+            String(p.date || ""),
+            String(p.time || ""),
             p.type === "SALE" ? "বিক্রি" : "মাল ক্রয়",
-            p.amount,
-            p.serial_no || 0,
-            p.notes || "",
+            Number(p.amount) || 0,
+            Number(p.serial_no) || 0,
+            String(p.notes || ""),
             now
           ]);
         }
@@ -156,7 +170,7 @@ function doPost(e) {
       // ৪. "লেনদেন_বিস্তারিত" শিট সম্পূর্ণ আপডেট করা (ডিলিট হওয়া রো একদম মুছে যাবে)
       var currentLogLastRow = logSheet.getLastRow();
       if (currentLogLastRow > 1) {
-        logSheet.getRange(2, 1, currentLogLastRow - 1, 8).clearContent();
+        logSheet.deleteRows(2, currentLogLastRow - 1);
       }
 
       if (keptRows.length > 0) {
@@ -168,6 +182,7 @@ function doPost(e) {
 
       keptRows.forEach(function(row) {
         var d = String(row[1]);
+        if (!d || d === "undefined") return;
         var type = String(row[3]);
         var amt = Number(row[4]) || 0;
 
@@ -202,7 +217,7 @@ function doPost(e) {
 
       var currentSummaryLastRow = summarySheet.getLastRow();
       if (currentSummaryLastRow > 1) {
-        summarySheet.getRange(2, 1, currentSummaryLastRow - 1, 6).clearContent();
+        summarySheet.deleteRows(2, currentSummaryLastRow - 1);
       }
 
       if (summaryRows.length > 0) {
@@ -210,20 +225,24 @@ function doPost(e) {
       }
 
       // ৬. সব ডিভাইস যাতে গুগল শিটের সব ডাটা স্বয়ংক্রিয়ভাবে ডাউনলোড করে দেখতে পারে
-      var allServerRecords = keptRows.map(function(row) {
-        return {
-          id: String(row[0]),
-          date: String(row[1]),
-          time: String(row[2]),
-          type: row[3] === "মাল ক্রয়" ? "PURCHASE" : "SALE",
-          amount: Number(row[4]) || 0,
-          serial_no: Number(row[5]) || 0,
-          notes: String(row[6] || ""),
-          created_at: String(row[7] || now),
-          updated_at: String(row[7] || now),
-          is_deleted: 0
-        };
-      });
+      var allServerRecords = keptRows
+        .filter(function(row) {
+          return row[0] && String(row[0]).trim() !== "" && String(row[0]) !== "undefined";
+        })
+        .map(function(row) {
+          return {
+            id: String(row[0]),
+            date: String(row[1]),
+            time: String(row[2]),
+            type: row[3] === "মাল ক্রয়" ? "PURCHASE" : "SALE",
+            amount: Number(row[4]) || 0,
+            serial_no: Number(row[5]) || 0,
+            notes: String(row[6] || ""),
+            created_at: String(row[7] || now),
+            updated_at: String(row[7] || now),
+            is_deleted: 0
+          };
+        });
 
       return ContentService.createTextOutput(
         JSON.stringify({
