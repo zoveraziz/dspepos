@@ -1,9 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 
+function parseAmount(val: any): number {
+  if (typeof val === "number") return val;
+  let s = String(val || "").trim();
+  const bnDigits = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
+  for (let i = 0; i < 10; i++) {
+    s = s.split(bnDigits[i]).join(String(i));
+  }
+  s = s.replace(/[^0-9.]/g, "");
+  return parseFloat(s) || 0;
+}
+
 function normalizeDate(d: any): string {
   if (!d) return "";
   const str = String(d).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  const parts = str.split(/[\/\-.]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
+    if (parts[2].length === 4) return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+  }
   const dateObj = new Date(str);
   if (!isNaN(dateObj.getTime())) {
     const fmt = new Intl.DateTimeFormat("en-CA", {
@@ -48,25 +64,35 @@ export async function POST(req: NextRequest) {
 
     // Normalize and unwrap mutations so Google Apps Script always receives clean objects
     if (payload && Array.isArray(payload.mutations)) {
-      payload.mutations = payload.mutations.map((m: any) => {
-        let p = m.payload;
-        while (typeof p === "string") {
-          try {
-            p = JSON.parse(p);
-          } catch {
-            break;
+      payload.mutations = payload.mutations
+        .map((m: any) => {
+          let p = m.payload;
+          while (typeof p === "string") {
+            try {
+              p = JSON.parse(p);
+            } catch {
+              break;
+            }
           }
-        }
-        p = p || {};
-        if (p.date) p.date = normalizeDate(p.date);
-        if (p.time) p.time = normalizeTime(p.time);
-        return {
-          mutation_id: String(m.mutation_id || ""),
-          record_id: String(m.record_id || ""),
-          action: m.action || "INSERT",
-          payload: p,
-        };
-      });
+          p = p || {};
+          if (p.date) p.date = normalizeDate(p.date);
+          if (p.time) p.time = normalizeTime(p.time);
+          if (p.amount !== undefined) p.amount = parseAmount(p.amount);
+          return {
+            mutation_id: String(m.mutation_id || ""),
+            record_id: String(m.record_id || ""),
+            action: m.action || "INSERT",
+            payload: p,
+          };
+        })
+        .filter((m: any) => {
+          // Never allow 0 or negative amount transactions to be inserted or updated
+          if (m.action !== "DELETE") {
+            const amt = Number(m.payload?.amount) || 0;
+            if (amt <= 0) return false;
+          }
+          return true;
+        });
     }
 
     const res = await fetch(endpointUrl, {
@@ -104,7 +130,7 @@ export async function POST(req: NextRequest) {
             ...item,
             date: cleanDate,
             time: cleanTime,
-            amount: Number(item.amount) || 0,
+            amount: parseAmount(item.amount),
             serial_no: Number(item.serial_no) || 0,
           };
         })
@@ -124,4 +150,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
