@@ -86,6 +86,7 @@ export default function ShowroomApp() {
     initPWA();
     dbManager.init().then(() => {
       refreshAllData();
+      syncEngine.triggerSync();
     });
 
     if (gasUrlInputRef.current) {
@@ -100,6 +101,9 @@ export default function ShowroomApp() {
       }
       if (syncMsgRef.current) {
         syncMsgRef.current.textContent = message || state;
+      }
+      if (state === "synced") {
+        refreshAllData();
       }
     };
 

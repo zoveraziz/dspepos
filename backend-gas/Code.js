@@ -188,11 +188,26 @@ function doPost(e) {
         summarySheet.getRange(2, 1, summaryRows.length, 6).setValues(summaryRows);
       }
 
+      // ৬. সব ডিভাইস যাতে গুগল শিটের সব ডাটা স্বয়ংক্রিয়ভাবে ডাউনলোড করে দেখতে পারে
+      var allServerRecords = keptRows.map(function(row) {
+        return {
+          id: String(row[0]),
+          date: String(row[1]),
+          time: String(row[2]),
+          type: row[3] === "মাল ক্রয়" ? "PURCHASE" : "SALE",
+          amount: Number(row[4]) || 0,
+          serial_no: Number(row[5]) || 0,
+          notes: String(row[6] || ""),
+          updated_at: String(row[7] || now),
+          is_deleted: 0
+        };
+      });
+
       return ContentService.createTextOutput(
         JSON.stringify({
           success: true,
           serverTime: now,
-          serverChanges: []
+          serverChanges: allServerRecords
         })
       ).setMimeType(ContentService.MimeType.JSON);
     }
