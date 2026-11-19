@@ -166,6 +166,12 @@ function doPost(e) {
           });
         }
 
+        allServerRecords.sort(function(a, b) {
+          if (a.date !== b.date) return a.date.localeCompare(b.date);
+          if (a.time !== b.time) return a.time.localeCompare(b.time);
+          return (a.serial_no || 0) - (b.serial_no || 0);
+        });
+
         return ContentService.createTextOutput(
           JSON.stringify({
             success: true,
@@ -283,6 +289,41 @@ function doPost(e) {
           ]);
         }
       });
+
+      // ৪.১: সব লেনদেন নিখুঁতভাবে সাজানো (তারিখ এবং সময়ের ক্রমানুসারে)
+      // এতে ৯, ১০, ১১ উল্টাপাল্টা হওয়ার কোনো সুযোগ থাকবে না
+      keptRows.sort(function(a, b) {
+        var d1 = String(a[1] || "");
+        var d2 = String(b[1] || "");
+        if (d1 !== d2) return d1.localeCompare(d2);
+
+        var t1 = String(a[2] || "");
+        var t2 = String(b[2] || "");
+        if (t1 !== t2) return t1.localeCompare(t2);
+
+        var s1 = Number(a[5]) || 0;
+        var s2 = Number(b[5]) || 0;
+        return s1 - s2;
+      });
+
+      // ৪.২: প্রতিটি দিনের জন্য একক ও ধারাবাহিক কাস্টমার সিরিয়াল (#১, #২, #৩...) নিশ্চিত করা
+      // (মোবাইল ও পিসির সেলগুলো সময়ের ক্রমানুসারে একই কেন্দ্রীয় সিরিয়ালে স্বয়ংক্রিয়ভাবে সাজানো হবে)
+      var dayCustomerSeq = {};
+      for (var k = 0; k < keptRows.length; k++) {
+        var rowDate = String(keptRows[k][1] || "");
+        var rowType = String(keptRows[k][3] || "");
+        if (rowType === "বিক্রি") {
+          if (!dayCustomerSeq[rowDate]) dayCustomerSeq[rowDate] = 0;
+          dayCustomerSeq[rowDate]++;
+          var currentSeq = dayCustomerSeq[rowDate];
+          keptRows[k][5] = currentSeq; // কাস্টমার নং (serial_no)
+          
+          var noteVal = String(keptRows[k][6] || "").trim();
+          if (!noteVal || /^কাস্টমার\s*#?\d*$/i.test(noteVal)) {
+            keptRows[k][6] = "কাস্টমার #" + currentSeq;
+          }
+        }
+      }
 
       // ঙ. "লেনদেন_বিস্তারিত" শিট নিরাপদভাবে আপডেট করা (clearContent ব্যবহার করা হয়েছে যাতে কোনো এরর না হয়)
       var maxLogCols = Math.max(8, logSheet.getLastColumn());

@@ -5,12 +5,27 @@ function normalizeDate(d: any): string {
   if (!d) return "";
   const str = String(d).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  const parts = str.split(/[\/\-.]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
+    if (parts[2].length === 4) return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+  }
   const dateObj = new Date(str);
   if (!isNaN(dateObj.getTime())) {
-    const y = dateObj.getFullYear();
-    const m = String(dateObj.getMonth() + 1).padStart(2, "0");
-    const day = String(dateObj.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
+    try {
+      const fmt = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Dhaka",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      return fmt.format(dateObj);
+    } catch {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const day = String(dateObj.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
   }
   return str;
 }
@@ -18,10 +33,20 @@ function normalizeDate(d: any): string {
 function normalizeTime(t: any): string {
   if (!t) return "00:00:00";
   const str = String(t).trim();
-  if (/^\d{1,2}:\d{2}(:\d{2})?(\s?[AP]M)?$/i.test(str)) return str;
+  if (/^\d{2}:\d{2}:\d{2}$/.test(str)) return str;
   const d = new Date(str);
   if (!isNaN(d.getTime())) {
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    try {
+      return d.toLocaleTimeString("en-US", {
+        timeZone: "Asia/Dhaka",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+    } catch {
+      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    }
   }
   return str;
 }
@@ -291,6 +316,7 @@ class DatabaseManager {
           const req = store.getAll();
           req.onsuccess = () => {
             const list = (req.result as SyncMutation[]).filter((m) => m.status === "PENDING");
+            list.sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""));
             resolve(list as unknown as T[]);
           };
         } else {
@@ -306,10 +332,11 @@ class DatabaseManager {
   async addSale(amount: number): Promise<TransactionRecord> {
     const today = this.getTodayDateString();
     const todaySales = await this.getTodaySales();
-    const nextSerial = todaySales.length + 1;
+    const maxSerial = todaySales.reduce((max, s) => Math.max(max, Number(s.serial_no) || 0), 0);
+    const nextSerial = maxSerial + 1;
 
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const timeStr = this.getTodayTimeString();
+    const nowIso = new Date().toISOString();
 
     const record: TransactionRecord = {
       id: crypto.randomUUID(),
@@ -319,8 +346,8 @@ class DatabaseManager {
       amount: Number(amount),
       serial_no: nextSerial,
       notes: `কাস্টমার #${nextSerial}`,
-      created_at: now.toISOString(),
-      updated_at: now.toISOString(),
+      created_at: nowIso,
+      updated_at: nowIso,
       is_deleted: 0,
     };
 
@@ -355,8 +382,8 @@ class DatabaseManager {
   // Add Daily Purchase (মাল ক্রয়)
   async addPurchase(amount: number, notes?: string): Promise<TransactionRecord> {
     const today = this.getTodayDateString();
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const timeStr = this.getTodayTimeString();
+    const nowIso = new Date().toISOString();
 
     const record: TransactionRecord = {
       id: crypto.randomUUID(),
@@ -366,8 +393,8 @@ class DatabaseManager {
       amount: Number(amount),
       serial_no: 0,
       notes: notes || "মধু বন মাল ক্রয়",
-      created_at: now.toISOString(),
-      updated_at: now.toISOString(),
+      created_at: nowIso,
+      updated_at: nowIso,
       is_deleted: 0,
     };
 
@@ -527,7 +554,7 @@ class DatabaseManager {
                   serial_no = excluded.serial_no,
                   notes = excluded.notes,
                   updated_at = excluded.updated_at
-                WHERE excluded.updated_at > transactions.updated_at`,
+                WHERE excluded.updated_at >= transactions.updated_at`,
           params: [
             String(item.id || crypto.randomUUID()),
             dateStr,
@@ -561,12 +588,34 @@ class DatabaseManager {
     }
   }
 
-  private getTodayDateString(): string {
-    const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+  getTodayDateString(): string {
+    try {
+      const fmt = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Dhaka",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      return fmt.format(new Date());
+    } catch {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  }
+
+  getTodayTimeString(): string {
+    try {
+      return new Date().toLocaleTimeString("en-US", {
+        timeZone: "Asia/Dhaka",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+    } catch {
+      const d = new Date();
+      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    }
   }
 }
 

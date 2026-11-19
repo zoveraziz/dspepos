@@ -16,7 +16,7 @@ class SyncEngine {
       this.lastSyncTime = localStorage.getItem("madhuban_last_sync_time") || "";
 
       window.addEventListener("online", () => {
-        this.emit("idle", "Online detected, starting sync...");
+        this.emit("idle", "অনলাইন পাওয়া গেছে, সিঙ্ক শুরু হচ্ছে...");
         this.triggerSync();
       });
 
@@ -24,11 +24,23 @@ class SyncEngine {
         this.emit("offline", "অফলাইন মোড (লোকাল ডাটাবেজে সেভ হচ্ছে)");
       });
 
+      window.addEventListener("focus", () => {
+        if (navigator.onLine && !this.isRunning && this.endpointUrl) {
+          this.triggerSync();
+        }
+      });
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible" && navigator.onLine && !this.isRunning && this.endpointUrl) {
+          this.triggerSync();
+        }
+      });
+
       setInterval(() => {
         if (navigator.onLine && !this.isRunning && this.endpointUrl) {
           this.triggerSync();
         }
-      }, 30000);
+      }, 5000);
     }
   }
 

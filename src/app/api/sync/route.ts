@@ -107,6 +107,21 @@ export async function POST(req: NextRequest) {
           }
           return true;
         });
+
+      // Sort mutations chronologically so Google Apps Script always receives them in order
+      payload.mutations.sort((a: any, b: any) => {
+        const d1 = String(a.payload?.date || "");
+        const d2 = String(b.payload?.date || "");
+        if (d1 !== d2) return d1.localeCompare(d2);
+
+        const t1 = String(a.payload?.time || "");
+        const t2 = String(b.payload?.time || "");
+        if (t1 !== t2) return t1.localeCompare(t2);
+
+        const s1 = Number(a.payload?.serial_no) || 0;
+        const s2 = Number(b.payload?.serial_no) || 0;
+        return s1 - s2;
+      });
     }
 
     const res = await fetch(endpointUrl, {
