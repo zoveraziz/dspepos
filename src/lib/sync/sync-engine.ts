@@ -89,13 +89,31 @@ class SyncEngine {
         })),
       };
 
-      const res = await fetch(this.endpointUrl, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(requestPayload),
-      });
+      let data: any = null;
+      try {
+        const proxyRes = await fetch("/api/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            endpointUrl: this.endpointUrl,
+            payload: requestPayload,
+          }),
+        });
+        if (proxyRes.ok) {
+          data = await proxyRes.json();
+        }
+      } catch (proxyErr) {
+        console.warn("[SyncEngine] Proxy error, trying direct fetch", proxyErr);
+      }
 
-      const data = await res.json();
+      if (!data) {
+        const res = await fetch(this.endpointUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(requestPayload),
+        });
+        data = await res.json();
+      }
 
       if (data && data.success) {
         if (mutationIds.length > 0) {
