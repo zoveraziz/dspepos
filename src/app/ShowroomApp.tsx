@@ -37,6 +37,17 @@ export default function ShowroomApp() {
   const shopSubtitleInputRef = useRef<HTMLInputElement>(null);
   const shopPhoneInputRef = useRef<HTMLInputElement>(null);
 
+  // Role-Based Access Control (Manager vs Admin)
+  const [userRole, setUserRole] = useState<"manager" | "admin">("manager");
+  const [adminPin, setAdminPin] = useState<string>("7788");
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState<boolean>(false);
+  const [pinInput, setPinInput] = useState<string>("");
+  const [pinError, setPinError] = useState<string>("");
+  const userRoleRef = useRef<"manager" | "admin">(userRole);
+  userRoleRef.current = userRole;
+  const pendingTabRef = useRef<"counter" | "monthly" | "purchase" | "sync" | null>(null);
+  const adminPinInputRef = useRef<HTMLInputElement>(null);
+
   // Active Tab State (Explicit and reliable)
   const [activeTab, setActiveTab] = useState<"counter" | "monthly" | "purchase" | "sync">("counter");
   const [gasCopied, setGasCopied] = useState(false);
@@ -119,6 +130,16 @@ export default function ShowroomApp() {
       const savedPhone = localStorage.getItem("dsp_shop_phone");
       if (savedPhone) setShopPhone(savedPhone);
 
+      const savedRole = localStorage.getItem("dsp_user_role");
+      if (savedRole === "admin" || savedRole === "manager") {
+        setUserRole(savedRole);
+        userRoleRef.current = savedRole;
+      }
+      const savedPin = localStorage.getItem("dsp_admin_pin");
+      if (savedPin) {
+        setAdminPin(savedPin);
+      }
+
       // Persistent Storage lock for zero-data-loss offline safety
       if (typeof navigator !== "undefined" && navigator.storage && navigator.storage.persist) {
         navigator.storage.persist().catch(() => {});
@@ -157,6 +178,56 @@ export default function ShowroomApp() {
       localStorage.setItem("dsp_ui_lang", next);
     } catch {}
   };
+
+  const handleUnlockAdmin = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (pinInput.trim() === adminPin.trim()) {
+      setUserRole("admin");
+      userRoleRef.current = "admin";
+      try {
+        localStorage.setItem("dsp_user_role", "admin");
+      } catch {}
+      setIsAdminModalOpen(false);
+      setPinInput("");
+      setPinError("");
+      if (pendingTabRef.current) {
+        setActiveTab(pendingTabRef.current);
+        pendingTabRef.current = null;
+      }
+    } else {
+      setPinError(uiLang === "en" ? "Incorrect PIN! Default is 7788." : "ভুল পিন কোড! ডিফল্ট পিন: 7788");
+      setPinInput("");
+    }
+  };
+
+  const handleSwitchToManager = () => {
+    setUserRole("manager");
+    userRoleRef.current = "manager";
+    try {
+      localStorage.setItem("dsp_user_role", "manager");
+    } catch {}
+    setActiveTab("counter");
+  };
+
+  const handleTabClick = (tab: "counter" | "monthly" | "purchase" | "sync") => {
+    if (tab === "counter") {
+      setActiveTab("counter");
+      return;
+    }
+    if (userRole === "admin") {
+      setActiveTab(tab);
+    } else {
+      pendingTabRef.current = tab;
+      setPinError("");
+      setPinInput("");
+      setIsAdminModalOpen(true);
+    }
+  };
+
+  useEffect(() => {
+    userRoleRef.current = userRole;
+    renderTodaySales(todaySalesCacheRef.current);
+  }, [userRole]);
 
   useEffect(() => {
     refreshAllData();
@@ -287,6 +358,8 @@ export default function ShowroomApp() {
     const fragment = document.createDocumentFragment();
     const reversed = [...sales].reverse();
 
+    const canDelete = userRoleRef.current === "admin";
+
     reversed.forEach((s) => {
       const tr = document.createElement("tr");
       const serialDisplay = formatDigitString(s.serial_no, curDigits);
@@ -303,9 +376,11 @@ export default function ShowroomApp() {
           <button data-action="print" data-id="${s.id}" class="btn-table-action mr-1.5" title="${tCur.printSlipBtn}">
             🖨️ ${tCur.printSlipBtn}
           </button>
-          <button data-action="delete" data-id="${s.id}" class="btn-table-danger" title="মুছুন">
-            🗑️
-          </button>
+          ${canDelete ? `
+            <button data-action="delete" data-id="${s.id}" class="btn-table-danger" title="মুছুন">
+              🗑️
+            </button>
+          ` : ""}
         </td>
       `;
       fragment.appendChild(tr);
@@ -562,7 +637,7 @@ export default function ShowroomApp() {
     }
 
     try {
-      const record = await dbManager.addSale(val);
+      const record = await dbManager.addSale(val, userRoleRef.current === "admin" ? "অ্যাডমিন" : "ম্যানেজার");
 
       saleAmountInputRef.current.value = "";
       saleAmountInputRef.current.focus();
@@ -622,6 +697,10 @@ export default function ShowroomApp() {
     if (action === "print" && record) {
       await printBridge.printSlip(record, { shopName, subtitle: shopSubtitle, phone: shopPhone });
     } else if (action === "delete") {
+      if (userRoleRef.current !== "admin") {
+        alert(uiLang === "en" ? "Delete is restricted to Admin. Please unlock Admin mode." : "বিক্রি মোছার অনুমতি কেবল অ্যাডমিন/মালিকের রয়েছে। অনুগ্রহ করে অ্যাডমিন মোডে লগইন করুন।");
+        return;
+      }
       if (confirm("এই বিক্রির এন্ট্রিটি কি মুছে ফেলতে চান?")) {
         await dbManager.deleteTransaction(recordId);
         await refreshAllData();
@@ -639,6 +718,10 @@ export default function ShowroomApp() {
     if (!recordId) return;
 
     if (action === "delete") {
+      if (userRoleRef.current !== "admin") {
+        alert(uiLang === "en" ? "Delete is restricted to Admin. Please unlock Admin mode." : "মাল ক্রয় মোছার অনুমতি কেবল অ্যাডমিন/মালিকের রয়েছে।");
+        return;
+      }
       if (confirm("এই মাল ক্রয়ের এন্ট্রিটি কি মুছে ফেলতে চান?")) {
         await dbManager.deleteTransaction(recordId);
         await refreshAllData();
@@ -679,6 +762,13 @@ export default function ShowroomApp() {
       const phone = shopPhoneInputRef.current.value.trim();
       setShopPhone(phone);
       localStorage.setItem("dsp_shop_phone", phone);
+    }
+    if (adminPinInputRef.current) {
+      const pin = adminPinInputRef.current.value.trim();
+      if (pin.length >= 4) {
+        setAdminPin(pin);
+        localStorage.setItem("dsp_admin_pin", pin);
+      }
     }
     alert(uiLang === "en" ? "✓ Store profile & Google Sheet link saved! Testing sync..." : "✓ শোরুম প্রোফাইল ও গুগল শিট লিংক সেভ হয়েছে! সিঙ্ক পরীক্ষা করা হচ্ছে...");
     syncEngine.triggerSync();
@@ -775,6 +865,40 @@ export default function ShowroomApp() {
               <span>🌐 {uiLang === "bn" ? "বাং" : "EN"}</span>
             </button>
 
+            {/* Role Switcher: Manager vs Admin */}
+            {userRole === "manager" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  pendingTabRef.current = null;
+                  setPinError("");
+                  setPinInput("");
+                  setIsAdminModalOpen(true);
+                }}
+                className="btn-header-pill cursor-pointer"
+                style={{ borderColor: "#64748b", color: "#e2e8f0" }}
+                title={uiLang === "en" ? "Manager Mode Active (Click to unlock Admin)" : "ম্যানেজার মোড সক্রিয় (ক্লিক করে অ্যাডমিন মোডে যান)"}
+              >
+                <span>👤 {uiLang === "en" ? "Manager" : "ম্যানেজার"}</span>
+                <span style={{ fontSize: "10px", padding: "1px 5px", background: "rgba(245,158,11,0.25)", color: "#fbbf24", borderRadius: "4px", marginLeft: "4px", fontWeight: 700 }}>
+                  🔑 {uiLang === "en" ? "Admin" : "অ্যাডমিন"}
+                </span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSwitchToManager}
+                className="btn-header-pill cursor-pointer"
+                style={{ borderColor: "#10b981", color: "#34d399", background: "rgba(16,185,129,0.15)" }}
+                title={uiLang === "en" ? "Admin Mode Active (Click to lock to Manager)" : "অ্যাডমিন মোড সক্রিয় (ক্লিক করে ম্যানেজার মোডে ফিরুন)"}
+              >
+                <span>👑 {uiLang === "en" ? "Admin" : "অ্যাডমিন"}</span>
+                <span style={{ fontSize: "10px", padding: "1px 5px", background: "rgba(239,68,68,0.25)", color: "#f87171", borderRadius: "4px", marginLeft: "4px", fontWeight: 700 }}>
+                  🔒 {uiLang === "en" ? "Lock" : "লক"}
+                </span>
+              </button>
+            )}
+
             <div
               ref={syncPillRef}
               className="sync-status-pill cursor-pointer"
@@ -841,31 +965,34 @@ export default function ShowroomApp() {
         <div className="tab-nav-inner">
           <button
             type="button"
-            onClick={() => setActiveTab("counter")}
+            onClick={() => handleTabClick("counter")}
             className={`tab-btn ${activeTab === "counter" ? "tab-btn-active" : ""}`}
           >
             ⚡ {t.tabCounter}
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("monthly")}
+            onClick={() => handleTabClick("monthly")}
             className={`tab-btn ${activeTab === "monthly" ? "tab-btn-active" : ""}`}
+            title={userRole === "manager" ? "লক করা (অ্যাডমিন পিন প্রয়োজন)" : ""}
           >
-            📊 {t.tabMonthly}
+            📊 {t.tabMonthly} {userRole === "manager" ? "🔒" : ""}
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("purchase")}
+            onClick={() => handleTabClick("purchase")}
             className={`tab-btn ${activeTab === "purchase" ? "tab-btn-active" : ""}`}
+            title={userRole === "manager" ? "লক করা (অ্যাডমিন পিন প্রয়োজন)" : ""}
           >
-            📦 {t.tabPurchase}
+            📦 {t.tabPurchase} {userRole === "manager" ? "🔒" : ""}
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("sync")}
+            onClick={() => handleTabClick("sync")}
             className={`tab-btn ${activeTab === "sync" ? "tab-btn-active" : ""}`}
+            title={userRole === "manager" ? "লক করা (অ্যাডমিন পিন প্রয়োজন)" : ""}
           >
-            ⚙️ {t.tabSync}
+            ⚙️ {t.tabSync} {userRole === "manager" ? "🔒" : ""}
           </button>
         </div>
       </nav>
@@ -1254,6 +1381,19 @@ export default function ShowroomApp() {
                       className="sync-input-field"
                     />
                   </div>
+                  <div className="form-group">
+                    <label style={{ fontWeight: 600, color: "var(--text-main)", fontSize: "0.85rem" }}>
+                      🔐 {uiLang === "en" ? "Admin Master PIN (4 Digits)" : "অ্যাডমিন মাস্টার পিন (৪ ডিজিট)"}
+                    </label>
+                    <input
+                      ref={adminPinInputRef}
+                      type="password"
+                      maxLength={8}
+                      defaultValue={adminPin}
+                      placeholder="যেমন: 7788"
+                      className="sync-input-field"
+                    />
+                  </div>
                 </div>
 
                 <div className="form-group">
@@ -1367,7 +1507,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.5.7
+                        v2.5.8
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
@@ -1420,6 +1560,111 @@ export default function ShowroomApp() {
           </div>
         )}
       </main>
+
+      {/* ADMIN PIN UNLOCK MODAL */}
+      {isAdminModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsAdminModalOpen(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <span style={{ fontSize: "1.5rem" }}>🔐</span>
+                <div>
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#fff" }}>
+                    {uiLang === "en" ? "Admin PIN Verification" : "অ্যাডমিন মাস্টার পিন দিন"}
+                  </h3>
+                  <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                    {uiLang === "en"
+                      ? "Enter 4-digit admin PIN to unlock restricted features"
+                      : "মাসের হিসাব, মাল ক্রয় ও সেটিংস আনলক করতে অ্যাডমিন পিন দিন"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAdminModalOpen(false);
+                  pendingTabRef.current = null;
+                }}
+                className="modal-close-btn"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleUnlockAdmin} style={{ marginTop: "1.25rem" }}>
+              <div style={{ textAlign: "center", marginBottom: "1rem" }}>
+                <input
+                  type="password"
+                  maxLength={8}
+                  autoFocus
+                  value={pinInput}
+                  onChange={(e) => {
+                    setPinInput(e.target.value);
+                    setPinError("");
+                  }}
+                  placeholder="••••"
+                  className="pin-display-input"
+                />
+                {pinError && (
+                  <p style={{ color: "#f87171", fontSize: "0.85rem", marginTop: "0.5rem", fontWeight: 600 }}>
+                    ⚠️ {pinError}
+                  </p>
+                )}
+                <p style={{ fontSize: "0.78rem", color: "#94a3b8", marginTop: "0.4rem" }}>
+                  {uiLang === "en" ? "Default master PIN: 7788" : "ডিফল্ট মাস্টার পিন: 7788 (সেটিংস থেকে পরিবর্তনযোগ্য)"}
+                </p>
+              </div>
+
+              {/* Touch Keypad for POS / Mobile */}
+              <div className="pin-keypad-grid">
+                {["1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "⌫"].map((btn) => (
+                  <button
+                    key={btn}
+                    type="button"
+                    onClick={() => {
+                      if (btn === "C") {
+                        setPinInput("");
+                        setPinError("");
+                      } else if (btn === "⌫") {
+                        setPinInput((prev) => prev.slice(0, -1));
+                      } else {
+                        if (pinInput.length < 8) {
+                          setPinInput((prev) => prev + btn);
+                          setPinError("");
+                        }
+                      }
+                    }}
+                    className="pin-key-btn"
+                  >
+                    {btn}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.25rem" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAdminModalOpen(false);
+                    pendingTabRef.current = null;
+                  }}
+                  className="btn-secondary"
+                  style={{ flex: 1, padding: "0.65rem" }}
+                >
+                  {uiLang === "en" ? "Cancel" : "বাতিল"}
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  style={{ flex: 1, padding: "0.65rem", backgroundColor: "#10b981", color: "#fff", fontWeight: 700 }}
+                >
+                  🔓 {uiLang === "en" ? "Unlock Admin" : "আনলক করুন"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

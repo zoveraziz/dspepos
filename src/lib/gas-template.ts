@@ -1,1 +1,538 @@
-export const GAS_CODE_TEMPLATE = "/**\n * ডিজিটাল সার্ভিস পয়েন্ট / মধুবন শোরুম - Google Apps Script Two-Way Sync Backend\n * Features:\n *  - সম্পূর্ণ নিরাপদ ও নিখুঁত টু-ওয়ে সিঙ্ক (মোবাইল + পিসি + গুগল শিট)\n *  - ০ বা ফাঁকা টাকার কোনো এন্ট্রি শিটে ঢুকবে না (ভুয়া \"মাল ক্রয়\" ০ রোধ)\n *  - শিট ব্লিংকিং সম্পূর্ণ বন্ধ (Read-only fast path + in-place clearContent)\n *  - \"Sorry, it is not possible to delete all non-frozen rows\" এরর সম্পূর্ণ মুক্ত\n *  - স্বয়ংক্রিয়ভাবে শিট থেকে পুরনো ভুল/০-টাকার ডাটা পরিষ্কার করে ফেলা\n */\n\nfunction parseAmount(val) {\n  if (typeof val === \"number\") return val;\n  var s = String(val || \"\").trim();\n  var bnDigits = [\"০\", \"১\", \"২\", \"৩\", \"৪\", \"৫\", \"৬\", \"৭\", \"৮\", \"৯\"];\n  for (var i = 0; i < 10; i++) {\n    s = s.split(bnDigits[i]).join(String(i));\n  }\n  s = s.replace(/[^0-9.]/g, \"\");\n  return parseFloat(s) || 0;\n}\n\nfunction normalizeDate(d) {\n  if (!d) return \"\";\n  var str = String(d).trim();\n  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(str)) return str;\n  var parts = str.split(/[\\/\\-.]/);\n  if (parts.length === 3) {\n    if (parts[0].length === 4) return parts[0] + \"-\" + (\"0\" + parts[1]).slice(-2) + \"-\" + (\"0\" + parts[2]).slice(-2);\n    if (parts[2].length === 4) return parts[2] + \"-\" + (\"0\" + parts[1]).slice(-2) + \"-\" + (\"0\" + parts[0]).slice(-2);\n  }\n  var dt = new Date(str);\n  if (!isNaN(dt.getTime())) {\n    var y = dt.getFullYear();\n    var m = String(dt.getMonth() + 1);\n    if (m.length < 2) m = \"0\" + m;\n    var day = String(dt.getDate());\n    if (day.length < 2) day = \"0\" + day;\n    return y + \"-\" + m + \"-\" + day;\n  }\n  return str;\n}\n\nfunction doGet(e) {\n  return ContentService.createTextOutput(\n    JSON.stringify({\n      status: \"online\",\n      brand: \"ডিজিটাল সার্ভিস পয়েন্ট ePOS Sync Server\",\n      timestamp: new Date().toISOString()\n    })\n  ).setMimeType(ContentService.MimeType.JSON);\n}\n\nfunction doPost(e) {\n  var lock = LockService.getScriptLock();\n  if (!lock.tryLock(25000)) {\n    return ContentService.createTextOutput(\n      JSON.stringify({ success: false, error: \"সার্ভার ব্যস্ত, কিছুক্ষণ পর আবার চেষ্টা করুন।\" })\n    ).setMimeType(ContentService.MimeType.JSON);\n  }\n\n  try {\n    if (!e || !e.postData || !e.postData.contents) {\n      return ContentService.createTextOutput(\n        JSON.stringify({ success: false, error: \"খালি রিকোয়েস্ট\" })\n      ).setMimeType(ContentService.MimeType.JSON);\n    }\n\n    var request = JSON.parse(e.postData.contents);\n    var ss = SpreadsheetApp.getActiveSpreadsheet();\n\n    // Sheet 1: দৈনিক ক্রয়, বিক্রি ও অবশিষ্ট স্টক\n    var summarySheet = ss.getSheetByName(\"দৈনিক_ক্রয়_বিক্রয়_স্টক\");\n    if (!summarySheet) {\n      summarySheet = ss.insertSheet(\"দৈনিক_ক্রয়_বিক্রয়_স্টক\", 0);\n      summarySheet.appendRow([\n        \"তারিখ\", \"মাল ক্রয় (৳)\", \"মাল বিক্রি (৳)\", \"অবশিষ্ট স্টক (৳)\", \"কাস্টমার সংখ্যা\", \"সর্বশেষ আপডেট\"\n      ]);\n      summarySheet.getRange(1, 1, 1, 6)\n        .setFontWeight(\"bold\")\n        .setBackground(\"#0f172a\")\n        .setFontColor(\"#ffffff\");\n      summarySheet.setFrozenRows(1);\n    }\n\n    // Sheet 2: লেনদেন বিস্তারিত লগ\n    var logSheet = ss.getSheetByName(\"লেনদেন_বিস্তারিত\");\n    if (!logSheet) {\n      logSheet = ss.insertSheet(\"লেনদেন_বিস্তারিত\", 1);\n      logSheet.appendRow([\n        \"আইডি\", \"তারিখ\", \"সময়\", \"ধরন\", \"টাকার পরিমাণ\", \"কাস্টমার নং\", \"নোট\", \"আপডেট সময়\"\n      ]);\n      logSheet.getRange(1, 1, 1, 8)\n        .setFontWeight(\"bold\")\n        .setBackground(\"#334155\")\n        .setFontColor(\"#f8fafc\");\n      logSheet.setFrozenRows(1);\n    }\n\n    // নিশ্চিত করা যাতে শিটে পর্যাপ্ত খালি রো থাকে এবং \"Add 1000 rows\" ডায়লগ উপরে না আসে\n    if (logSheet.getMaxRows() < 100) {\n      logSheet.insertRowsAfter(logSheet.getMaxRows(), 500);\n    }\n    if (summarySheet.getMaxRows() < 100) {\n      summarySheet.insertRowsAfter(summarySheet.getMaxRows(), 500);\n    }\n\n    var now = new Date().toISOString();\n\n    // ১. সম্পূর্ণ ডাটা ক্লিয়ার করার কমান্ড\n    if (request.action === \"CLEAR_ALL_DATA\") {\n      var maxLogCols = Math.max(8, logSheet.getLastColumn());\n      var currentLogLastRow = logSheet.getLastRow();\n      if (currentLogLastRow > 1) {\n        logSheet.getRange(2, 1, currentLogLastRow - 1, maxLogCols).clearContent();\n      }\n\n      var maxSumCols = Math.max(6, summarySheet.getLastColumn());\n      var currentSummaryLastRow = summarySheet.getLastRow();\n      if (currentSummaryLastRow > 1) {\n        summarySheet.getRange(2, 1, currentSummaryLastRow - 1, maxSumCols).clearContent();\n      }\n\n      return ContentService.createTextOutput(\n        JSON.stringify({\n          success: true,\n          message: \"All data cleared successfully\",\n          serverTime: now,\n          serverChanges: []\n        })\n      ).setMimeType(ContentService.MimeType.JSON);\n    }\n\n    // ২. ব্যাচ সিঙ্ক কমান্ড\n    if (request.action === \"BATCH_SYNC\") {\n      var mutations = request.mutations || [];\n\n      // ক. রিড-অনলি মোড (যদি নতুন কোনো পরিবর্তন না থাকে) - কোনো শিট এডিট হবে না, ব্লিংকিং বন্ধ\n      if (mutations.length === 0) {\n        var logDataRange = logSheet.getDataRange();\n        var logValues = logDataRange.getDisplayValues();\n        var allServerRecords = [];\n\n        for (var r = 1; r < logValues.length; r++) {\n          var row = logValues[r];\n          var rowId = String(row[0] || \"\").trim();\n          var amt = parseAmount(row[4]);\n          var dateStr = normalizeDate(row[1]);\n\n          // ফাঁকা, ভুল বা ০ টাকার রো বাদ দেওয়া\n          if (!rowId || rowId === \"undefined\" || rowId === \"null\" || amt <= 0 || !dateStr) {\n            continue;\n          }\n\n          var isPurchase = (row[3] === \"মাল ক্রয়\" || row[3] === \"মাল ক্রয়\" || row[3] === \"PURCHASE\");\n          allServerRecords.push({\n            id: rowId,\n            date: dateStr,\n            time: String(row[2] || \"\"),\n            type: isPurchase ? \"PURCHASE\" : \"SALE\",\n            amount: amt,\n            serial_no: Number(row[5]) || 0,\n            notes: String(row[6] || \"\"),\n            created_at: String(row[7] || now),\n            updated_at: String(row[7] || now),\n            is_deleted: 0\n          });\n        }\n\n        allServerRecords.sort(function(a, b) {\n          if (a.date !== b.date) return a.date.localeCompare(b.date);\n          if (a.time !== b.time) return a.time.localeCompare(b.time);\n          return (a.serial_no || 0) - (b.serial_no || 0);\n        });\n\n        return ContentService.createTextOutput(\n          JSON.stringify({\n            success: true,\n            serverTime: now,\n            serverChanges: allServerRecords\n          })\n        ).setMimeType(ContentService.MimeType.JSON);\n      }\n\n      // খ. মিউটেশন ফিল্টারিং ও প্রসেসিং\n      var deleteIds = {};\n      var upsertMap = {};\n\n      mutations.forEach(function(m) {\n        var recId = String(m.record_id || \"\").trim();\n        if (!recId || recId === \"undefined\" || recId === \"null\") return;\n\n        if (m.action === \"DELETE\") {\n          deleteIds[recId] = true;\n        } else {\n          var payload = m.payload;\n          while (typeof payload === \"string\") {\n            try {\n              payload = JSON.parse(payload);\n            } catch (e) {\n              break;\n            }\n          }\n          if (payload && typeof payload === \"object\") {\n            var pAmt = parseAmount(payload.amount);\n            // ০ বা নেগেটিভ টাকা কখনোই নেওয়া হবে না\n            if (pAmt > 0) {\n              payload.amount = pAmt;\n              upsertMap[recId] = payload;\n            }\n          }\n        }\n      });\n\n      // গ. গুগল শিটের বিদ্যমান ডাটা পড়া এবং ফিল্টার করা\n      var logDataRange = logSheet.getDataRange();\n      var logValues = logDataRange.getDisplayValues();\n      var keptRows = [];\n      var handledIds = {};\n\n      for (var r = 1; r < logValues.length; r++) {\n        var row = logValues[r];\n        var rowId = String(row[0] || \"\").trim();\n        var existingAmt = parseAmount(row[4]);\n        var existingDate = normalizeDate(row[1]);\n\n        // ফাঁকা রো বা অকার্যকর ০-টাকার রো শিট থেকে স্বয়ংক্রিয়ভাবে বাদ দেওয়া\n        if (!rowId || rowId === \"undefined\" || rowId === \"null\" || existingAmt <= 0 || !existingDate) {\n          continue;\n        }\n\n        // যদি অ্যাপ থেকে ডিলিট করা হয়ে থাকে\n        if (deleteIds[rowId]) {\n          continue;\n        }\n\n        // যদি এই আইডিতে কোনো নতুন আপডেট থাকে\n        if (upsertMap[rowId]) {\n          var up = upsertMap[rowId];\n          var upAmt = parseAmount(up.amount);\n          if (upAmt > 0) {\n            var isPurch = (up.type === \"PURCHASE\" || up.type === \"মাল ক্রয়\" || up.type === \"মাল ক্রয়\");\n            keptRows.push([\n              rowId,\n              normalizeDate(up.date) || existingDate,\n              String(up.time || \"\"),\n              isPurch ? \"মাল ক্রয়\" : \"বিক্রি\",\n              upAmt,\n              Number(up.serial_no) || 0,\n              String(up.notes || \"\"),\n              now\n            ]);\n            handledIds[rowId] = true;\n          }\n        } else {\n          var isPurchRow = (row[3] === \"মাল ক্রয়\" || row[3] === \"মাল ক্রয়\" || row[3] === \"PURCHASE\");\n          keptRows.push([\n            rowId,\n            existingDate,\n            String(row[2] || \"\"),\n            isPurchRow ? \"মাল ক্রয়\" : \"বিক্রি\",\n            existingAmt,\n            Number(row[5]) || 0,\n            String(row[6] || \"\"),\n            String(row[7] || now)\n          ]);\n          handledIds[rowId] = true;\n        }\n      }\n\n      // ঘ. নতুন ইনসার্ট হওয়া এন্ট্রিগুলো যোগ করা\n      Object.keys(upsertMap).forEach(function(newId) {\n        if (!handledIds[newId] && !deleteIds[newId]) {\n          var p = upsertMap[newId];\n          var amt = parseAmount(p.amount);\n          if (amt <= 0) return;\n\n          var dateStr = normalizeDate(p.date) || normalizeDate(new Date());\n          var isPurch = (p.type === \"PURCHASE\" || p.type === \"মাল ক্রয়\" || p.type === \"মাল ক্রয়\");\n\n          keptRows.push([\n            newId,\n            dateStr,\n            String(p.time || \"00:00:00\"),\n            isPurch ? \"মাল ক্রয়\" : \"বিক্রি\",\n            amt,\n            Number(p.serial_no) || 0,\n            String(p.notes || \"\"),\n            now\n          ]);\n        }\n      });\n\n      // ৪.১: সব লেনদেন নিখুঁতভাবে সাজানো (তারিখ এবং সময়ের ক্রমানুসারে)\n      // এতে ৯, ১০, ১১ উল্টাপাল্টা হওয়ার কোনো সুযোগ থাকবে না\n      keptRows.sort(function(a, b) {\n        var d1 = String(a[1] || \"\");\n        var d2 = String(b[1] || \"\");\n        if (d1 !== d2) return d1.localeCompare(d2);\n\n        var t1 = String(a[2] || \"\");\n        var t2 = String(b[2] || \"\");\n        if (t1 !== t2) return t1.localeCompare(t2);\n\n        var s1 = Number(a[5]) || 0;\n        var s2 = Number(b[5]) || 0;\n        return s1 - s2;\n      });\n\n      // ৪.২: প্রতিটি দিনের জন্য একক ও ধারাবাহিক কাস্টমার সিরিয়াল (#১, #২, #৩...) নিশ্চিত করা\n      // (মোবাইল ও পিসির সেলগুলো সময়ের ক্রমানুসারে একই কেন্দ্রীয় সিরিয়ালে স্বয়ংক্রিয়ভাবে সাজানো হবে)\n      var dayCustomerSeq = {};\n      for (var k = 0; k < keptRows.length; k++) {\n        var rowDate = String(keptRows[k][1] || \"\");\n        var rowType = String(keptRows[k][3] || \"\");\n        if (rowType === \"বিক্রি\") {\n          if (!dayCustomerSeq[rowDate]) dayCustomerSeq[rowDate] = 0;\n          dayCustomerSeq[rowDate]++;\n          var currentSeq = dayCustomerSeq[rowDate];\n          keptRows[k][5] = currentSeq; // কাস্টমার নং (serial_no)\n          \n          var noteVal = String(keptRows[k][6] || \"\").trim();\n          if (!noteVal || noteVal.indexOf(\"কাস্টমার\") === 0) {\n            keptRows[k][6] = \"কাস্টমার #\" + currentSeq;\n          }\n        }\n      }\n\n      // ঙ. \"লেনদেন_বিস্তারিত\" শিট নিরাপদভাবে আপডেট করা (clearContent ব্যবহার করা হয়েছে যাতে কোনো এরর না হয়)\n      var maxLogCols = Math.max(8, logSheet.getLastColumn());\n      var currentLogLastRow = logSheet.getLastRow();\n      if (currentLogLastRow > 1) {\n        logSheet.getRange(2, 1, currentLogLastRow - 1, maxLogCols).clearContent().setBackground(null).setFontWeight(\"normal\");\n      }\n\n      if (keptRows.length > 0) {\n        if (logSheet.getMaxRows() < keptRows.length + 5) {\n          logSheet.insertRowsAfter(logSheet.getMaxRows(), keptRows.length + 50 - logSheet.getMaxRows());\n        }\n        var logRange = logSheet.getRange(2, 1, keptRows.length, 8);\n        logRange.setValues(keptRows);\n\n        // ১. প্রফেশনাল অ্যালাইনমেন্ট ও নাম্বার ফরম্যাটিং\n        logSheet.getRange(2, 1, keptRows.length, 1).setFontFamily(\"Courier New\").setHorizontalAlignment(\"center\");\n        logSheet.getRange(2, 2, keptRows.length, 2).setHorizontalAlignment(\"center\");\n        logSheet.getRange(2, 4, keptRows.length, 1).setHorizontalAlignment(\"center\");\n        logSheet.getRange(2, 5, keptRows.length, 1).setNumberFormat(\"৳#,##0.00\").setHorizontalAlignment(\"right\");\n        logSheet.getRange(2, 6, keptRows.length, 1).setHorizontalAlignment(\"center\");\n        logSheet.getRange(2, 7, keptRows.length, 1).setHorizontalAlignment(\"left\");\n        logSheet.getRange(2, 8, keptRows.length, 1).setHorizontalAlignment(\"center\");\n\n        // ২. জেব্রা স্ট্রাইপ ও ক্রয়ের জন্য আলাদা নরম নীল ব্যাকগ্রাউন্ড\n        var logBgs = [];\n        for (var y = 0; y < keptRows.length; y++) {\n          var isPurchLog = (keptRows[y][3] === \"মাল ক্রয়\");\n          var c = isPurchLog ? (y % 2 === 0 ? \"#eff6ff\" : \"#dbeafe\") : (y % 2 === 0 ? \"#ffffff\" : \"#f8fafc\");\n          logBgs.push([c, c, c, c, c, c, c, c]);\n        }\n        logRange.setBackgrounds(logBgs);\n\n        // ৩. কলামগুলোর প্রস্থ (Width) নিখুঁত করা\n        logSheet.setColumnWidth(1, 140);\n        logSheet.setColumnWidth(2, 110);\n        logSheet.setColumnWidth(3, 100);\n        logSheet.setColumnWidth(4, 90);\n        logSheet.setColumnWidth(5, 130);\n        logSheet.setColumnWidth(6, 100);\n        logSheet.setColumnWidth(7, 180);\n        logSheet.setColumnWidth(8, 160);\n      }\n\n      // চ. \"দৈনিক_ক্রয়_বিক্রয়_স্টক\" শিট স্বয়ংক্রিয়ভাবে পুনরায় সঠিকভাবে হিসাব করা\n      var dateMap = {};\n\n      keptRows.forEach(function(row) {\n        var d = String(row[1]);\n        if (!d) return;\n        var type = String(row[3]);\n        var amt = parseAmount(row[4]);\n\n        if (!dateMap[d]) {\n          dateMap[d] = { purchase: 0, sale: 0, count: 0 };\n        }\n\n        if (type === \"মাল ক্রয়\") {\n          dateMap[d].purchase += amt;\n        } else if (type === \"বিক্রি\") {\n          dateMap[d].sale += amt;\n          dateMap[d].count += 1;\n        }\n      });\n\n      var sortedDates = Object.keys(dateMap).sort();\n      var runningStock = 0;\n      var totalPurchAll = 0;\n      var totalSaleAll = 0;\n      var totalCustAll = 0;\n      var summaryRows = [];\n\n      sortedDates.forEach(function(d) {\n        var item = dateMap[d];\n        runningStock += (item.purchase - item.sale);\n        totalPurchAll += item.purchase;\n        totalSaleAll += item.sale;\n        totalCustAll += item.count;\n\n        summaryRows.push([\n          d,\n          item.purchase,\n          item.sale,\n          runningStock,\n          item.count,\n          new Date().toLocaleTimeString(\"en-US\", { timeZone: \"Asia/Dhaka\" })\n        ]);\n      });\n\n      // গ্র্যান্ড টোটাল সামারি রো যুক্ত করা\n      var hasSummaryData = summaryRows.length > 0;\n      if (hasSummaryData) {\n        summaryRows.push([\n          \"মোট সর্বমোট হিসাব\",\n          totalPurchAll,\n          totalSaleAll,\n          runningStock,\n          totalCustAll,\n          \"সার্বিক ব্যালেন্স\"\n        ]);\n      }\n\n      var maxSumCols = Math.max(6, summarySheet.getLastColumn());\n      var currentSummaryLastRow = summarySheet.getLastRow();\n      if (currentSummaryLastRow > 1) {\n        summarySheet.getRange(2, 1, currentSummaryLastRow - 1, maxSumCols).clearContent().setBackground(null).setFontWeight(\"normal\");\n      }\n\n      if (summaryRows.length > 0) {\n        if (summarySheet.getMaxRows() < summaryRows.length + 5) {\n          summarySheet.insertRowsAfter(summarySheet.getMaxRows(), summaryRows.length + 50 - summarySheet.getMaxRows());\n        }\n        var sumRange = summarySheet.getRange(2, 1, summaryRows.length, 6);\n        sumRange.setValues(summaryRows);\n\n        // ১. প্রফেশনাল অ্যালাইনমেন্ট ও কারেন্সি ফরম্যাটিং\n        summarySheet.getRange(2, 1, summaryRows.length, 1).setHorizontalAlignment(\"center\");\n        summarySheet.getRange(2, 2, summaryRows.length, 3).setNumberFormat(\"৳#,##0.00\").setHorizontalAlignment(\"right\");\n        summarySheet.getRange(2, 5, summaryRows.length, 2).setHorizontalAlignment(\"center\");\n\n        // ২. জেব্রা স্ট্রাইপ ব্যাকগ্রাউন্ড\n        var sumBgs = [];\n        for (var z = 0; z < summaryRows.length - 1; z++) {\n          var bg = (z % 2 === 0) ? \"#ffffff\" : \"#f8fafc\";\n          sumBgs.push([bg, bg, bg, bg, bg, bg]);\n        }\n        // গ্র্যান্ড টোটাল সারির জন্য বিশেষ ব্যাকগ্রাউন্ড\n        sumBgs.push([\"#e2e8f0\", \"#e2e8f0\", \"#e2e8f0\", \"#e2e8f0\", \"#e2e8f0\", \"#e2e8f0\"]);\n        sumRange.setBackgrounds(sumBgs);\n\n        // গ্র্যান্ড টোটাল বোল্ড করা\n        summarySheet.getRange(summaryRows.length + 1, 1, 1, 6).setFontWeight(\"bold\");\n\n        // ৩. কলামগুলোর সঠিক উইডথ সেট করা\n        summarySheet.setColumnWidth(1, 120);\n        summarySheet.setColumnWidth(2, 140);\n        summarySheet.setColumnWidth(3, 140);\n        summarySheet.setColumnWidth(4, 160);\n        summarySheet.setColumnWidth(5, 120);\n        summarySheet.setColumnWidth(6, 140);\n      }\n\n      // ছ. রেসপন্স তৈরি করা যাতে সব ডিভাইস (মোবাইল + পিসি) রিয়েলটাইমে আপডেট দেখতে পায়\n      var allServerRecords = keptRows.map(function(row) {\n        var isPurch = (row[3] === \"মাল ক্রয়\" || row[3] === \"PURCHASE\");\n        return {\n          id: String(row[0]),\n          date: String(row[1]),\n          time: String(row[2]),\n          type: isPurch ? \"PURCHASE\" : \"SALE\",\n          amount: parseAmount(row[4]),\n          serial_no: Number(row[5]) || 0,\n          notes: String(row[6] || \"\"),\n          created_at: String(row[7] || now),\n          updated_at: String(row[7] || now),\n          is_deleted: 0\n        };\n      });\n\n      return ContentService.createTextOutput(\n        JSON.stringify({\n          success: true,\n          serverTime: now,\n          serverChanges: allServerRecords\n        })\n      ).setMimeType(ContentService.MimeType.JSON);\n    }\n\n    return ContentService.createTextOutput(\n      JSON.stringify({ success: false, error: \"অজানা কমান্ড\" })\n    ).setMimeType(ContentService.MimeType.JSON);\n\n  } catch (err) {\n    return ContentService.createTextOutput(\n      JSON.stringify({ success: false, error: err.toString() })\n    ).setMimeType(ContentService.MimeType.JSON);\n  } finally {\n    lock.releaseLock();\n  }\n}\n";
+export const GAS_CODE_TEMPLATE = `/**
+ * ডিজিটাল সার্ভিস পয়েন্ট / শোরুম - Google Apps Script Two-Way Sync Backend
+ * Features:
+ *  - সম্পূর্ণ নিরাপদ ও নিখুঁত টু-ওয়ে সিঙ্ক (মোবাইল + পিসি + গুগল শিট)
+ *  - ইউজার রোল সাপোর্ট (ম্যানেজার vs অ্যাডমিন অডিট লগ)
+ *  - অটোমেটিক "রোল_ও_নিয়মাবলী" গাইডলাইন শিট তৈরি
+ *  - ০ বা ফাঁকা টাকার কোনো এন্ট্রি শিটে ঢুকবে না
+ *  - শিট ব্লিংকিং সম্পূর্ণ বন্ধ (Read-only fast path + in-place clearContent)
+ *  - "Sorry, it is not possible to delete all non-frozen rows" এরর সম্পূর্ণ মুক্ত
+ */
+
+function parseAmount(val) {
+  if (typeof val === "number") return val;
+  var s = String(val || "").trim();
+  var bnDigits = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
+  for (var i = 0; i < 10; i++) {
+    s = s.split(bnDigits[i]).join(String(i));
+  }
+  s = s.replace(/[^0-9.]/g, "");
+  return parseFloat(s) || 0;
+}
+
+function normalizeDate(d) {
+  if (!d) return "";
+  var str = String(d).trim();
+  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(str)) return str;
+  var parts = str.split(/[\\/\\-.]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) return parts[0] + "-" + ("0" + parts[1]).slice(-2) + "-" + ("0" + parts[2]).slice(-2);
+    if (parts[2].length === 4) return parts[2] + "-" + ("0" + parts[1]).slice(-2) + "-" + ("0" + parts[0]).slice(-2);
+  }
+  var dt = new Date(str);
+  if (!isNaN(dt.getTime())) {
+    var y = dt.getFullYear();
+    var m = String(dt.getMonth() + 1);
+    if (m.length < 2) m = "0" + m;
+    var day = String(dt.getDate());
+    if (day.length < 2) day = "0" + day;
+    return y + "-" + m + "-" + day;
+  }
+  return str;
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput(
+    JSON.stringify({
+      status: "online",
+      brand: "DSP ePOS Role-Based Sync Server",
+      timestamp: new Date().toISOString()
+    })
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(25000)) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ success: false, error: "সার্ভার ব্যস্ত, কিছুক্ষণ পর আবার চেষ্টা করুন।" })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return ContentService.createTextOutput(
+        JSON.stringify({ success: false, error: "খালি রিকোয়েস্ট" })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var request = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // Sheet 1: দৈনিক ক্রয়, বিক্রি ও অবশিষ্ট স্টক
+    var summarySheet = ss.getSheetByName("দৈনিক_ক্রয়_বিক্রয়_স্টক");
+    if (!summarySheet) {
+      summarySheet = ss.insertSheet("দৈনিক_ক্রয়_বিক্রয়_স্টক", 0);
+      summarySheet.appendRow([
+        "তারিখ", "মাল ক্রয় (৳)", "মাল বিক্রি (৳)", "অবশিষ্ট স্টক (৳)", "কাস্টমার সংখ্যা", "সর্বশেষ আপডেট"
+      ]);
+      summarySheet.getRange(1, 1, 1, 6)
+        .setFontWeight("bold")
+        .setBackground("#0f172a")
+        .setFontColor("#ffffff");
+      summarySheet.setFrozenRows(1);
+    }
+
+    // Sheet 2: লেনদেন বিস্তারিত লগ (অপারেটর কলাম সহ)
+    var logSheet = ss.getSheetByName("লেনদেন_বিস্তারিত");
+    if (!logSheet) {
+      logSheet = ss.insertSheet("লেনদেন_বিস্তারিত", 1);
+      logSheet.appendRow([
+        "আইডি", "তারিখ", "সময়", "ধরন", "টাকার পরিমাণ", "কাস্টমার নং", "বিবরণ / নোট", "অপারেটর", "আপডেট সময়"
+      ]);
+      logSheet.getRange(1, 1, 1, 9)
+        .setFontWeight("bold")
+        .setBackground("#1e293b")
+        .setFontColor("#f8fafc");
+      logSheet.setFrozenRows(1);
+    }
+
+    // Sheet 3: ইউজার রোল ও সিস্টেম ব্যবহারের নীতিমালা
+    var rulesSheet = ss.getSheetByName("রোল_ও_নিয়মাবলী");
+    if (!rulesSheet) {
+      rulesSheet = ss.insertSheet("রোল_ও_নিয়মাবলী", 2);
+      rulesSheet.appendRow(["🏢 DSP ePOS - ইউজার রোল, নিরাপত্তা ও ব্যবহারের নির্দেশিকা"]);
+      rulesSheet.appendRow(["বিষয়", "ম্যানেজার (Manager)", "অ্যাডমিন / মালিক (Admin)", "নিরাপত্তা ও নিয়মাবলী"]);
+
+      var rulesData = [
+        ["মূল দায়িত্ব", "ক্যাশ কাউন্টারে সেলস এন্ট্রি ও রসিদ প্রিন্ট", "সার্বিক নিয়ন্ত্রণ, মাল ক্রয়, হিসাব ও স্টক নিরীক্ষা", "দোকানের হিসাব স্বচ্ছ ও নিরাপদ রাখা"],
+        ["বিক্রি এন্ট্রি (Sale)", "অনুমোদিত (কিবোর্ডের Enter দিয়ে দ্রুত বিক্রি)", "অনুমোদিত", "প্রতিটি বিক্রির পাশে অপারেটরের নাম রেকর্ড থাকবে"],
+        ["বিক্রি ডিলিট (Delete)", "নিষিদ্ধ (মুছতে পারবে না)", "অনুমোদিত (প্রয়োজনে ডিলিট করতে পারবে)", "কর্মচারী যাতে ক্যাশ নিয়ে বিক্রি ভয়েড না করতে পারে"],
+        ["মাল ক্রয় এন্ট্রি (Purchase)", "লকড (কোনো এক্সেস নেই)", "অনুমোদিত (পাইকারি মাল কেনার হিসাব যোগ)", "মালিক দূর থেকেও মোবাইল দিয়ে ক্রয় এন্ট্রি দিতে পারবেন"],
+        ["মাসের হিসাব ও স্টক শিট", "লকড (দেখতে পারবে না)", "পূর্ণ প্রবেশাধিকার (দৈনিক ও মাসিক খতিয়ান)", "মালিক ব্যতীত ব্যবসায়িক মোট লাভ/স্টক তথ্য গোপন থাকবে"],
+        ["গুগল শিট সিঙ্ক সেটিংস", "লকড (পরিবর্তন করতে পারবে না)", "পূর্ণ নিয়ন্ত্রণ (শিট লিংক ও দোকানের নাম বদল)", "সিঙ্ক সেটিংস ভুলক্রমে যাতে নষ্ট না হয়"],
+        ["লগইন ও মাস্টার পিন", "কাউন্টার ওপেন করলেই ম্যানেজার মোড", "ডিফল্ট মাস্টার পিন: 7788 (পরিবর্তনযোগ্য)", "মালিক কাজ শেষে ম্যানেজার মোডে রেখে যাবেন"],
+        ["মাসের শেষে ডাটা ক্লিয়ার", "কোনো অনুমতি নেই", "শুধু কাউন্টার ফ্রেশ করা যাবে", "লোকাল ডাটা ক্লিয়ার করলেও গুগল শিটের রেকর্ড আজীবন সুরক্ষিত থাকে"]
+      ];
+
+      for (var rd = 0; rd < rulesData.length; rd++) {
+        rulesSheet.appendRow(rulesData[rd]);
+      }
+
+      rulesSheet.getRange(1, 1, 1, 4).merge().setFontWeight("bold").setFontSize(13).setBackground("#0f172a").setFontColor("#ffffff").setHorizontalAlignment("center");
+      rulesSheet.getRange(2, 1, 1, 4).setFontWeight("bold").setFontSize(11).setBackground("#1e293b").setFontColor("#38bdf8").setHorizontalAlignment("center");
+      rulesSheet.getRange(3, 1, rulesData.length, 4).setFontSize(10).setVerticalAlignment("middle");
+      rulesSheet.getRange(3, 1, rulesData.length, 1).setFontWeight("bold").setBackground("#f1f5f9");
+      rulesSheet.setColumnWidth(1, 180);
+      rulesSheet.setColumnWidth(2, 260);
+      rulesSheet.setColumnWidth(3, 280);
+      rulesSheet.setColumnWidth(4, 300);
+      rulesSheet.setRowHeights(1, rulesData.length + 2, 28);
+    }
+
+    // নিশ্চিত করা যাতে শিটে পর্যাপ্ত খালি রো থাকে
+    if (logSheet.getMaxRows() < 100) {
+      logSheet.insertRowsAfter(logSheet.getMaxRows(), 500);
+    }
+    if (summarySheet.getMaxRows() < 100) {
+      summarySheet.insertRowsAfter(summarySheet.getMaxRows(), 500);
+    }
+
+    var now = new Date().toISOString();
+
+    // ১. সম্পূর্ণ ডাটা ক্লিয়ার করার কমান্ড
+    if (request.action === "CLEAR_ALL_DATA") {
+      var maxLogCols = Math.max(9, logSheet.getLastColumn());
+      var currentLogLastRow = logSheet.getLastRow();
+      if (currentLogLastRow > 1) {
+        logSheet.getRange(2, 1, currentLogLastRow - 1, maxLogCols).clearContent();
+      }
+
+      var maxSumCols = Math.max(6, summarySheet.getLastColumn());
+      var currentSummaryLastRow = summarySheet.getLastRow();
+      if (currentSummaryLastRow > 1) {
+        summarySheet.getRange(2, 1, currentSummaryLastRow - 1, maxSumCols).clearContent();
+      }
+
+      return ContentService.createTextOutput(
+        JSON.stringify({
+          success: true,
+          message: "All data cleared successfully",
+          serverTime: now,
+          serverChanges: []
+        })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ২. ব্যাচ সিঙ্ক কমান্ড
+    if (request.action === "BATCH_SYNC") {
+      var mutations = request.mutations || [];
+
+      // ক. রিড-অনলি মোড (যদি নতুন কোনো পরিবর্তন না থাকে)
+      if (mutations.length === 0) {
+        var logDataRange = logSheet.getDataRange();
+        var logValues = logDataRange.getDisplayValues();
+        var allServerRecords = [];
+
+        for (var r = 1; r < logValues.length; r++) {
+          var row = logValues[r];
+          var rowId = String(row[0] || "").trim();
+          var amt = parseAmount(row[4]);
+          var dateStr = normalizeDate(row[1]);
+
+          if (!rowId || rowId === "undefined" || rowId === "null" || amt <= 0 || !dateStr) {
+            continue;
+          }
+
+          var isPurchase = (row[3] === "মাল ক্রয়" || row[3] === "মাল ক্রয়" || row[3] === "PURCHASE");
+          allServerRecords.push({
+            id: rowId,
+            date: dateStr,
+            time: String(row[2] || ""),
+            type: isPurchase ? "PURCHASE" : "SALE",
+            amount: amt,
+            serial_no: Number(row[5]) || 0,
+            notes: String(row[6] || ""),
+            operator: String(row[7] || (isPurchase ? "অ্যাডমিন" : "ম্যানেজার")),
+            created_at: String(row[8] || now),
+            updated_at: String(row[8] || now),
+            is_deleted: 0
+          });
+        }
+
+        allServerRecords.sort(function(a, b) {
+          if (a.date !== b.date) return a.date.localeCompare(b.date);
+          if (a.time !== b.time) return a.time.localeCompare(b.time);
+          return (a.serial_no || 0) - (b.serial_no || 0);
+        });
+
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: true,
+            serverTime: now,
+            serverChanges: allServerRecords
+          })
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      // খ. মিউটেশন ফিল্টারিং ও প্রসেসিং
+      var deleteIds = {};
+      var upsertMap = {};
+
+      mutations.forEach(function(m) {
+        var recId = String(m.record_id || "").trim();
+        if (!recId || recId === "undefined" || recId === "null") return;
+
+        if (m.action === "DELETE") {
+          deleteIds[recId] = true;
+        } else {
+          var payload = m.payload;
+          while (typeof payload === "string") {
+            try {
+              payload = JSON.parse(payload);
+            } catch (e) {
+              break;
+            }
+          }
+          if (payload && typeof payload === "object") {
+            var pAmt = parseAmount(payload.amount);
+            if (pAmt > 0) {
+              payload.amount = pAmt;
+              upsertMap[recId] = payload;
+            }
+          }
+        }
+      });
+
+      // গ. গুগল শিটের বিদ্যমান ডাটা পড়া
+      var logDataRange = logSheet.getDataRange();
+      var logValues = logDataRange.getDisplayValues();
+      var keptRows = [];
+      var handledIds = {};
+
+      for (var r = 1; r < logValues.length; r++) {
+        var row = logValues[r];
+        var rowId = String(row[0] || "").trim();
+        var existingAmt = parseAmount(row[4]);
+        var existingDate = normalizeDate(row[1]);
+
+        if (!rowId || rowId === "undefined" || rowId === "null" || existingAmt <= 0 || !existingDate) {
+          continue;
+        }
+
+        if (deleteIds[rowId]) {
+          continue;
+        }
+
+        if (upsertMap[rowId]) {
+          var up = upsertMap[rowId];
+          var upAmt = parseAmount(up.amount);
+          if (upAmt > 0) {
+            var isPurch = (up.type === "PURCHASE" || up.type === "মাল ক্রয়" || up.type === "মাল ক্রয়");
+            var op = String(up.operator || (isPurch ? "অ্যাডমিন" : "ম্যানেজার"));
+            keptRows.push([
+              rowId,
+              normalizeDate(up.date) || existingDate,
+              String(up.time || ""),
+              isPurch ? "মাল ক্রয়" : "বিক্রি",
+              upAmt,
+              Number(up.serial_no) || 0,
+              String(up.notes || ""),
+              op,
+              now
+            ]);
+            handledIds[rowId] = true;
+          }
+        } else {
+          var isPurchRow = (row[3] === "মাল ক্রয়" || row[3] === "মাল ক্রয়" || row[3] === "PURCHASE");
+          var existingOp = String(row[7] || (isPurchRow ? "অ্যাডমিন" : "ম্যানেজার"));
+          keptRows.push([
+            rowId,
+            existingDate,
+            String(row[2] || ""),
+            isPurchRow ? "মাল ক্রয়" : "বিক্রি",
+            existingAmt,
+            Number(row[5]) || 0,
+            String(row[6] || ""),
+            existingOp,
+            String(row[8] || now)
+          ]);
+          handledIds[rowId] = true;
+        }
+      }
+
+      // ঘ. নতুন ইনসার্ট হওয়া এন্ট্রি যোগ করা
+      Object.keys(upsertMap).forEach(function(newId) {
+        if (!handledIds[newId] && !deleteIds[newId]) {
+          var p = upsertMap[newId];
+          var amt = parseAmount(p.amount);
+          if (amt <= 0) return;
+
+          var dateStr = normalizeDate(p.date) || normalizeDate(new Date());
+          var isPurch = (p.type === "PURCHASE" || p.type === "মাল ক্রয়" || p.type === "মাল ক্রয়");
+          var op = String(p.operator || (isPurch ? "অ্যাডমিন" : "ম্যানেজার"));
+
+          keptRows.push([
+            newId,
+            dateStr,
+            String(p.time || "00:00:00"),
+            isPurch ? "মাল ক্রয়" : "বিক্রি",
+            amt,
+            Number(p.serial_no) || 0,
+            String(p.notes || ""),
+            op,
+            now
+          ]);
+        }
+      });
+
+      // ৪.১: সব লেনদেন নিখুঁতভাবে সাজানো
+      keptRows.sort(function(a, b) {
+        var d1 = String(a[1] || "");
+        var d2 = String(b[1] || "");
+        if (d1 !== d2) return d1.localeCompare(d2);
+
+        var t1 = String(a[2] || "");
+        var t2 = String(b[2] || "");
+        if (t1 !== t2) return t1.localeCompare(t2);
+
+        var s1 = Number(a[5]) || 0;
+        var s2 = Number(b[5]) || 0;
+        return s1 - s2;
+      });
+
+      // ৪.২: প্রতিটি দিনের জন্য একক ও ধারাবাহিক কাস্টমার সিরিয়াল (#১, #২, #৩...)
+      var dayCustomerSeq = {};
+      for (var k = 0; k < keptRows.length; k++) {
+        var rowDate = String(keptRows[k][1] || "");
+        var rowType = String(keptRows[k][3] || "");
+        if (rowType === "বিক্রি") {
+          if (!dayCustomerSeq[rowDate]) dayCustomerSeq[rowDate] = 0;
+          dayCustomerSeq[rowDate]++;
+          var currentSeq = dayCustomerSeq[rowDate];
+          keptRows[k][5] = currentSeq;
+          
+          var noteVal = String(keptRows[k][6] || "").trim();
+          if (!noteVal || noteVal.indexOf("কাস্টমার") === 0) {
+            keptRows[k][6] = "কাস্টমার #" + currentSeq;
+          }
+        }
+      }
+
+      // ঙ. "লেনদেন_বিস্তারিত" শিট আপডেট করা
+      var maxLogCols = Math.max(9, logSheet.getLastColumn());
+      var currentLogLastRow = logSheet.getLastRow();
+      if (currentLogLastRow > 1) {
+        logSheet.getRange(2, 1, currentLogLastRow - 1, maxLogCols).clearContent().setBackground(null).setFontWeight("normal");
+      }
+
+      if (keptRows.length > 0) {
+        if (logSheet.getMaxRows() < keptRows.length + 5) {
+          logSheet.insertRowsAfter(logSheet.getMaxRows(), keptRows.length + 50 - logSheet.getMaxRows());
+        }
+        var logRange = logSheet.getRange(2, 1, keptRows.length, 9);
+        logRange.setValues(keptRows);
+
+        // ১. প্রফেশনাল অ্যালাইনমেন্ট ও ফরম্যাটিং
+        logSheet.getRange(2, 1, keptRows.length, 1).setFontFamily("Courier New").setHorizontalAlignment("center");
+        logSheet.getRange(2, 2, keptRows.length, 2).setHorizontalAlignment("center");
+        logSheet.getRange(2, 4, keptRows.length, 1).setHorizontalAlignment("center");
+        logSheet.getRange(2, 5, keptRows.length, 1).setNumberFormat("৳#,##0.00").setHorizontalAlignment("right");
+        logSheet.getRange(2, 6, keptRows.length, 1).setHorizontalAlignment("center");
+        logSheet.getRange(2, 7, keptRows.length, 1).setHorizontalAlignment("left");
+        logSheet.getRange(2, 8, keptRows.length, 1).setHorizontalAlignment("center").setFontWeight("bold");
+        logSheet.getRange(2, 9, keptRows.length, 1).setHorizontalAlignment("center");
+
+        // ২. জেব্রা স্ট্রাইপ ও অপারেটর হাইলাইট
+        var logBgs = [];
+        for (var y = 0; y < keptRows.length; y++) {
+          var isPurchLog = (keptRows[y][3] === "মাল ক্রয়");
+          var c = isPurchLog ? (y % 2 === 0 ? "#eff6ff" : "#dbeafe") : (y % 2 === 0 ? "#ffffff" : "#f8fafc");
+          logBgs.push([c, c, c, c, c, c, c, c, c]);
+        }
+        logRange.setBackgrounds(logBgs);
+
+        // ৩. কলামগুলোর প্রস্থ
+        logSheet.setColumnWidth(1, 140);
+        logSheet.setColumnWidth(2, 110);
+        logSheet.setColumnWidth(3, 100);
+        logSheet.setColumnWidth(4, 90);
+        logSheet.setColumnWidth(5, 130);
+        logSheet.setColumnWidth(6, 100);
+        logSheet.setColumnWidth(7, 180);
+        logSheet.setColumnWidth(8, 120);
+        logSheet.setColumnWidth(9, 160);
+      }
+
+      // চ. "দৈনিক_ক্রয়_বিক্রয়_স্টক" শিট স্বয়ংক্রিয়ভাবে হিসাব করা
+      var dateMap = {};
+
+      keptRows.forEach(function(row) {
+        var d = String(row[1]);
+        if (!d) return;
+        var type = String(row[3]);
+        var amt = parseAmount(row[4]);
+
+        if (!dateMap[d]) {
+          dateMap[d] = { purchase: 0, sale: 0, count: 0 };
+        }
+
+        if (type === "মাল ক্রয়") {
+          dateMap[d].purchase += amt;
+        } else if (type === "বিক্রি") {
+          dateMap[d].sale += amt;
+          dateMap[d].count += 1;
+        }
+      });
+
+      var sortedDates = Object.keys(dateMap).sort();
+      var runningStock = 0;
+      var totalPurchAll = 0;
+      var totalSaleAll = 0;
+      var totalCustAll = 0;
+      var summaryRows = [];
+
+      sortedDates.forEach(function(d) {
+        var item = dateMap[d];
+        runningStock += (item.purchase - item.sale);
+        totalPurchAll += item.purchase;
+        totalSaleAll += item.sale;
+        totalCustAll += item.count;
+
+        summaryRows.push([
+          d,
+          item.purchase,
+          item.sale,
+          runningStock,
+          item.count,
+          new Date().toLocaleTimeString("en-US", { timeZone: "Asia/Dhaka" })
+        ]);
+      });
+
+      // গ্র্যান্ড টোটাল সামারি রো
+      var hasSummaryData = summaryRows.length > 0;
+      if (hasSummaryData) {
+        summaryRows.push([
+          "মোট সর্বমোট হিসাব",
+          totalPurchAll,
+          totalSaleAll,
+          runningStock,
+          totalCustAll,
+          "সার্বিক ব্যালেন্স"
+        ]);
+      }
+
+      var maxSumCols = Math.max(6, summarySheet.getLastColumn());
+      var currentSummaryLastRow = summarySheet.getLastRow();
+      if (currentSummaryLastRow > 1) {
+        summarySheet.getRange(2, 1, currentSummaryLastRow - 1, maxSumCols).clearContent().setBackground(null).setFontWeight("normal");
+      }
+
+      if (summaryRows.length > 0) {
+        if (summarySheet.getMaxRows() < summaryRows.length + 5) {
+          summarySheet.insertRowsAfter(summarySheet.getMaxRows(), summaryRows.length + 50 - summarySheet.getMaxRows());
+        }
+        var sumRange = summarySheet.getRange(2, 1, summaryRows.length, 6);
+        sumRange.setValues(summaryRows);
+
+        summarySheet.getRange(2, 1, summaryRows.length, 1).setHorizontalAlignment("center");
+        summarySheet.getRange(2, 2, summaryRows.length, 3).setNumberFormat("৳#,##0.00").setHorizontalAlignment("right");
+        summarySheet.getRange(2, 5, summaryRows.length, 2).setHorizontalAlignment("center");
+
+        var sumBgs = [];
+        for (var z = 0; z < summaryRows.length - 1; z++) {
+          var bg = (z % 2 === 0) ? "#ffffff" : "#f8fafc";
+          sumBgs.push([bg, bg, bg, bg, bg, bg]);
+        }
+        sumBgs.push(["#e2e8f0", "#e2e8f0", "#e2e8f0", "#e2e8f0", "#e2e8f0", "#e2e8f0"]);
+        sumRange.setBackgrounds(sumBgs);
+
+        summarySheet.getRange(summaryRows.length + 1, 1, 1, 6).setFontWeight("bold");
+
+        summarySheet.setColumnWidth(1, 120);
+        summarySheet.setColumnWidth(2, 140);
+        summarySheet.setColumnWidth(3, 140);
+        summarySheet.setColumnWidth(4, 160);
+        summarySheet.setColumnWidth(5, 120);
+        summarySheet.setColumnWidth(6, 140);
+      }
+
+      // ছ. রেসপন্স তৈরি
+      var allServerRecords = keptRows.map(function(row) {
+        var isPurch = (row[3] === "মাল ক্রয়" || row[3] === "PURCHASE");
+        return {
+          id: String(row[0]),
+          date: String(row[1]),
+          time: String(row[2]),
+          type: isPurch ? "PURCHASE" : "SALE",
+          amount: parseAmount(row[4]),
+          serial_no: Number(row[5]) || 0,
+          notes: String(row[6] || ""),
+          operator: String(row[7] || (isPurch ? "অ্যাডমিন" : "ম্যানেজার")),
+          created_at: String(row[8] || now),
+          updated_at: String(row[8] || now),
+          is_deleted: 0
+        };
+      });
+
+      return ContentService.createTextOutput(
+        JSON.stringify({
+          success: true,
+          serverTime: now,
+          serverChanges: allServerRecords
+        })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput(
+      JSON.stringify({ success: false, error: "অজানা কমান্ড" })\n    ).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ success: false, error: err.toString() })
+    ).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}
+`;

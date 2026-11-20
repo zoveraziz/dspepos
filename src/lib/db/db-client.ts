@@ -335,7 +335,7 @@ class DatabaseManager {
   }
 
   // Quick Customer Sale (Just Amount!)
-  async addSale(amount: number): Promise<TransactionRecord> {
+  async addSale(amount: number, operator: string = "ম্যানেজার"): Promise<TransactionRecord> {
     const today = this.getTodayDateString();
     const todaySales = await this.getTodaySales();
     const maxSerial = todaySales.reduce((max, s) => Math.max(max, Number(s.serial_no) || 0), 0);
@@ -352,6 +352,7 @@ class DatabaseManager {
       amount: Number(amount),
       serial_no: nextSerial,
       notes: `কাস্টমার #${nextSerial}`,
+      operator: operator || "ম্যানেজার",
       created_at: nowIso,
       updated_at: nowIso,
       is_deleted: 0,
@@ -386,7 +387,7 @@ class DatabaseManager {
   }
 
   // Add Daily Purchase (মাল ক্রয়)
-  async addPurchase(amount: number, notes?: string): Promise<TransactionRecord> {
+  async addPurchase(amount: number, notes?: string, operator: string = "অ্যাডমিন"): Promise<TransactionRecord> {
     const today = this.getTodayDateString();
     const timeStr = this.getTodayTimeString();
     const nowIso = new Date().toISOString();
@@ -399,6 +400,7 @@ class DatabaseManager {
       amount: Number(amount),
       serial_no: 0,
       notes: notes || "DSP মাল ক্রয়",
+      operator: operator || "অ্যাডমিন",
       created_at: nowIso,
       updated_at: nowIso,
       is_deleted: 0,

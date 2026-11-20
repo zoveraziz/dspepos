@@ -1664,3 +1664,119 @@ body {
 [data-theme="light"] .ledger-cell-cust {
   color: #475569;
 }
+
+/* =========================================================================
+   12. ADMIN ROLE PIN MODAL & KEYPAD
+   ========================================================================= */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-card {
+  background-color: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 360px;
+  padding: 1.5rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  animation: modalPop 0.2s ease-out;
+}
+
+@keyframes modalPop {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+}
+.modal-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.pin-display-input {
+  width: 100%;
+  background-color: #050811;
+  border: 2px solid #3b82f6;
+  border-radius: 10px;
+  color: #38bdf8;
+  font-size: 2rem;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.5rem;
+  padding: 0.6rem 1rem;
+  outline: none;
+  font-family: monospace;
+}
+
+.pin-keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.pin-key-btn {
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  color: #f8fafc;
+  font-size: 1.25rem;
+  font-weight: 700;
+  padding: 0.75rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  user-select: none;
+}
+.pin-key-btn:hover {
+  background-color: #334155;
+  border-color: #64748b;
+}
+.pin-key-btn:active {
+  transform: scale(0.95);
+  background-color: #3b82f6;
+}
+
+[data-theme="light"] .modal-card {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+}
+[data-theme="light"] .modal-card h3 {
+  color: #0f172a !important;
+}
+[data-theme="light"] .pin-display-input {
+  background-color: #f8fafc;
+  border-color: #2563eb;
+  color: #1e40af;
+}
+[data-theme="light"] .pin-key-btn {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+[data-theme="light"] .pin-key-btn:hover {
+  background-color: #e2e8f0;
+}
