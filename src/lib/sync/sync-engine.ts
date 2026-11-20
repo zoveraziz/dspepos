@@ -11,8 +11,7 @@ class SyncEngine {
 
   constructor() {
     if (typeof window !== "undefined") {
-      this.endpointUrl = localStorage.getItem("madhuban_gas_url") || "https://script.google.com/macros/s/AKfycbz-GjX0kwJAGfx6Nt9IXv3xWsiteWxXNpEEBwarG7D_T0fAS4ONAewYfehWG_Jd4lC_/exec";
-      localStorage.setItem("madhuban_gas_url", this.endpointUrl);
+      this.endpointUrl = localStorage.getItem("madhuban_gas_url") || "";
       this.lastSyncTime = localStorage.getItem("madhuban_last_sync_time") || "";
 
       window.addEventListener("online", () => {
@@ -53,6 +52,10 @@ class SyncEngine {
 
   getEndpointUrl(): string {
     return this.endpointUrl;
+  }
+
+  hasEndpoint(): boolean {
+    return Boolean(this.endpointUrl && this.endpointUrl.trim().length > 0);
   }
 
   subscribe(callback: (state: SyncState, message?: string) => void) {

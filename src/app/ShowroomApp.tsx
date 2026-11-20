@@ -29,6 +29,14 @@ export default function ShowroomApp() {
   digitModeRef.current = digitMode;
   const t = translations[uiLang];
 
+  // Store / Showroom Profile (Custom branding for multiple shops)
+  const [shopName, setShopName] = useState<string>("ডিজিটাল সার্ভিস পয়েন্ট");
+  const [shopSubtitle, setShopSubtitle] = useState<string>("DSP ePOS");
+  const [shopPhone, setShopPhone] = useState<string>("");
+  const shopNameInputRef = useRef<HTMLInputElement>(null);
+  const shopSubtitleInputRef = useRef<HTMLInputElement>(null);
+  const shopPhoneInputRef = useRef<HTMLInputElement>(null);
+
   // Active Tab State (Explicit and reliable)
   const [activeTab, setActiveTab] = useState<"counter" | "monthly" | "purchase" | "sync">("counter");
   const [gasCopied, setGasCopied] = useState(false);
@@ -103,6 +111,18 @@ export default function ShowroomApp() {
         setUiLang(savedLang);
         uiLangRef.current = savedLang;
       }
+
+      const savedName = localStorage.getItem("dsp_shop_name");
+      if (savedName) setShopName(savedName);
+      const savedSub = localStorage.getItem("dsp_shop_subtitle");
+      if (savedSub) setShopSubtitle(savedSub);
+      const savedPhone = localStorage.getItem("dsp_shop_phone");
+      if (savedPhone) setShopPhone(savedPhone);
+
+      // Persistent Storage lock for zero-data-loss offline safety
+      if (typeof navigator !== "undefined" && navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist().catch(() => {});
+      }
     } catch {}
   }, []);
 
@@ -156,7 +176,9 @@ export default function ShowroomApp() {
     initPWA();
     dbManager.init().then(() => {
       refreshAllData();
-      syncEngine.triggerSync();
+      if (syncEngine.hasEndpoint()) {
+        syncEngine.triggerSync();
+      }
     });
 
     if (gasUrlInputRef.current) {
@@ -181,7 +203,11 @@ export default function ShowroomApp() {
         } else if (state === "error") {
           syncMsgRef.current.textContent = curLang === "en" ? "❌ Sync Error" : "❌ সিঙ্ক এরর";
         } else {
-          syncMsgRef.current.textContent = message || (curLang === "en" ? "Offline Mode" : "অফলাইন মোড");
+          if (!syncEngine.hasEndpoint()) {
+            syncMsgRef.current.textContent = curLang === "en" ? "⚙️ Set Google Sheet" : "⚙️ গুগল শিট সেট করুন";
+          } else {
+            syncMsgRef.current.textContent = message || (curLang === "en" ? "Offline Mode" : "অফলাইন মোড");
+          }
         }
       }
       if (state === "synced") {
@@ -472,12 +498,17 @@ export default function ShowroomApp() {
       periodTitle = `${customFromDate || (curLang === "en" ? "Start" : "শুরু")} - ${customToDate || (curLang === "en" ? "Today" : "আজ")}`;
     }
 
-    printBridge.printLedgerReport(rows, periodTitle, {
-      purchase: totalPurch,
-      sale: totalSale,
-      stock: totalPurch - totalSale,
-      customers: totalCust,
-    });
+    printBridge.printLedgerReport(
+      rows,
+      periodTitle,
+      {
+        purchase: totalPurch,
+        sale: totalSale,
+        stock: totalPurch - totalSale,
+        customers: totalCust,
+      },
+      { shopName, subtitle: shopSubtitle, phone: shopPhone }
+    );
   };
 
   // Render Today's Purchases
@@ -539,7 +570,7 @@ export default function ShowroomApp() {
       await refreshAllData();
 
       if (autoPrintCheckboxRef.current?.checked) {
-        await printBridge.printSlip(record);
+        await printBridge.printSlip(record, { shopName, subtitle: shopSubtitle, phone: shopPhone });
       }
 
       syncEngine.triggerSync();
@@ -589,7 +620,7 @@ export default function ShowroomApp() {
     const record = todaySalesCacheRef.current.find((r) => r.id === recordId);
 
     if (action === "print" && record) {
-      await printBridge.printSlip(record);
+      await printBridge.printSlip(record, { shopName, subtitle: shopSubtitle, phone: shopPhone });
     } else if (action === "delete") {
       if (confirm("এই বিক্রির এন্ট্রিটি কি মুছে ফেলতে চান?")) {
         await dbManager.deleteTransaction(recordId);
@@ -631,10 +662,26 @@ export default function ShowroomApp() {
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     if (gasUrlInputRef.current) {
-      syncEngine.setEndpointUrl(gasUrlInputRef.current.value);
-      alert("গুগল শিট স্ক্রিপ্ট লিংক সেভ হয়েছে! সিঙ্ক পরীক্ষা করা হচ্ছে...");
-      syncEngine.triggerSync();
+      const url = gasUrlInputRef.current.value.trim();
+      syncEngine.setEndpointUrl(url);
     }
+    if (shopNameInputRef.current) {
+      const name = shopNameInputRef.current.value.trim() || "ডিজিটাল সার্ভিস পয়েন্ট";
+      setShopName(name);
+      localStorage.setItem("dsp_shop_name", name);
+    }
+    if (shopSubtitleInputRef.current) {
+      const sub = shopSubtitleInputRef.current.value.trim() || "DSP ePOS";
+      setShopSubtitle(sub);
+      localStorage.setItem("dsp_shop_subtitle", sub);
+    }
+    if (shopPhoneInputRef.current) {
+      const phone = shopPhoneInputRef.current.value.trim();
+      setShopPhone(phone);
+      localStorage.setItem("dsp_shop_phone", phone);
+    }
+    alert(uiLang === "en" ? "✓ Store profile & Google Sheet link saved! Testing sync..." : "✓ শোরুম প্রোফাইল ও গুগল শিট লিংক সেভ হয়েছে! সিঙ্ক পরীক্ষা করা হচ্ছে...");
+    syncEngine.triggerSync();
   };
 
   const handleCopyGasCode = async () => {
@@ -690,8 +737,8 @@ export default function ShowroomApp() {
         <div className="header-inner">
           <div className="header-brand">
             <span className="brand-badge">DSP</span>
-            <h1 className="text-xl font-bold tracking-tight text-white">{t.brandTitle}</h1>
-            <span className="text-xs text-amber-300 font-semibold hidden sm:inline">{t.brandSub}</span>
+            <h1 className="text-xl font-bold tracking-tight text-white">{shopName}</h1>
+            <span className="text-xs text-amber-300 font-semibold hidden sm:inline">{shopSubtitle}</span>
           </div>
 
           <div className="header-actions">
@@ -728,9 +775,19 @@ export default function ShowroomApp() {
               <span>🌐 {uiLang === "bn" ? "বাং" : "EN"}</span>
             </button>
 
-            <div ref={syncPillRef} className="sync-status-pill" data-status="idle" title="গুগল শিট সিঙ্ক স্ট্যাটাস">
+            <div
+              ref={syncPillRef}
+              className="sync-status-pill cursor-pointer"
+              data-status={syncEngine.hasEndpoint() ? "idle" : "offline"}
+              title={syncEngine.hasEndpoint() ? "গুগল শিট সিঙ্ক স্ট্যাটাস" : "গুগল শিট সেট করুন"}
+              onClick={() => setActiveTab("sync")}
+            >
               <span className="inline-block w-2 h-2 rounded-full bg-current"></span>
-              <span ref={syncMsgRef}>{uiLang === "en" ? "Offline Mode" : "অফলাইন মোড"}</span>
+              <span ref={syncMsgRef}>
+                {syncEngine.hasEndpoint()
+                  ? (uiLang === "en" ? "Offline Mode" : "অফলাইন মোড")
+                  : (uiLang === "en" ? "⚙️ Set Google Sheet" : "⚙️ গুগল শিট সেট করুন")}
+              </span>
             </div>
 
             <button
@@ -1149,6 +1206,56 @@ export default function ShowroomApp() {
               </div>
 
               <form onSubmit={handleSaveSettings}>
+                {/* Safe multi-showroom alert if Google Sheet is not configured */}
+                {!syncEngine.hasEndpoint() && (
+                  <div style={{ backgroundColor: "rgba(245, 158, 11, 0.15)", border: "1px solid #f59e0b", borderRadius: "8px", padding: "0.85rem 1rem", marginBottom: "1.25rem", color: "#fbbf24", fontSize: "0.85rem", lineHeight: "1.5" }}>
+                    <strong>⚠️ {uiLang === "en" ? "Fresh Device / New Showroom Setup:" : "নতুন ডিভাইস বা নতুন শোরুম সেটআপ:"}</strong><br />
+                    {uiLang === "en"
+                      ? "This device is not connected to any Google Sheet yet. Paste your own Apps Script URL below to sync your shop data securely."
+                      : "এই ডিভাইসে এখনও কোনো গুগল শিট লিংক যুক্ত করা হয়নি। আপনার শোরুমের হিসাব সম্পূর্ণ আলাদা ও নিরাপদ রাখতে নিচে আপনার গুগল শিটের Apps Script লিংকটি বসিয়ে 'সেভ ও টেস্ট সিঙ্ক' চাপুন।"}
+                  </div>
+                )}
+
+                {/* Shop / Showroom Profile (Name, Subtitle, Phone for Print Receipts) */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem", marginBottom: "1.25rem", padding: "1rem", backgroundColor: "rgba(0, 0, 0, 0.2)", borderRadius: "8px", border: "1px solid var(--border-color)" }}>
+                  <div className="form-group">
+                    <label style={{ fontWeight: 600, color: "var(--text-main)", fontSize: "0.85rem" }}>
+                      🏪 {uiLang === "en" ? "Shop / Showroom Name" : "দোকান বা শোরুমের নাম"}
+                    </label>
+                    <input
+                      ref={shopNameInputRef}
+                      type="text"
+                      defaultValue={shopName}
+                      placeholder={uiLang === "en" ? "e.g. Badsha Sweets" : "যেমন: বাদশাহ এন্টারপ্রাইজ"}
+                      className="sync-input-field"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontWeight: 600, color: "var(--text-main)", fontSize: "0.85rem" }}>
+                      🏷️ {uiLang === "en" ? "Subtitle / Branch" : "উপ-শিরোনাম বা শাখা (স্লিপের জন্য)"}
+                    </label>
+                    <input
+                      ref={shopSubtitleInputRef}
+                      type="text"
+                      defaultValue={shopSubtitle}
+                      placeholder={uiLang === "en" ? "e.g. DSP ePOS / Main Branch" : "যেমন: DSP ePOS বা শাখা: চকবাজার"}
+                      className="sync-input-field"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontWeight: 600, color: "var(--text-main)", fontSize: "0.85rem" }}>
+                      📞 {uiLang === "en" ? "Contact Number / Address" : "মোবাইল নম্বর / ঠিকানা (রসিদের জন্য)"}
+                    </label>
+                    <input
+                      ref={shopPhoneInputRef}
+                      type="text"
+                      defaultValue={shopPhone}
+                      placeholder={uiLang === "en" ? "e.g. +88017XXXXXXXX" : "যেমন: মোবাইল: ০১৭১২-XXXXXX"}
+                      className="sync-input-field"
+                    />
+                  </div>
+                </div>
+
                 <div className="form-group">
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                     <label style={{ fontWeight: 600, color: "var(--text-main)" }}>
@@ -1260,7 +1367,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.5.6
+                        v2.5.7
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>

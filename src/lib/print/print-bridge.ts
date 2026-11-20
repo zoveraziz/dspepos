@@ -1,6 +1,12 @@
 import { ESCPOSEncoder } from "./escpos-encoder";
 import { TransactionRecord, DailySummaryRow } from "../db/types";
 
+export interface ReceiptProfile {
+  shopName?: string;
+  subtitle?: string;
+  phone?: string;
+}
+
 class PrintBridge {
   private serialPort: any = null;
 
@@ -24,7 +30,11 @@ class PrintBridge {
     return this.serialPort !== null;
   }
 
-  async printSlip(record: TransactionRecord): Promise<void> {
+  async printSlip(record: TransactionRecord, profile?: ReceiptProfile): Promise<void> {
+    const sName = profile?.shopName || "ডিজিটাল সার্ভিস পয়েন্ট";
+    const sSub = profile?.subtitle || "DSP ePOS সেলস রসিদ";
+    const sPhone = profile?.phone ? `মোবাইল: ${profile.phone}` : "";
+
     // 1. Direct Thermal Hardware Printer
     if (this.serialPort) {
       try {
@@ -34,10 +44,16 @@ class PrintBridge {
           .alignCenter()
           .bold(true)
           .doubleSize(true)
-          .text("ডিজিটাল সার্ভিস পয়েন্ট")
+          .text(sName)
           .doubleSize(false)
           .bold(false)
-          .text("DSP ePOS সেলস রসিদ")
+          .text(sSub);
+
+        if (sPhone) {
+          encoder.text(sPhone);
+        }
+
+        encoder
           .line("=")
           .alignLeft()
           .twoColumn(`কাস্টমার নং: #${record.serial_no}`, record.time)
@@ -65,11 +81,15 @@ class PrintBridge {
     }
 
     // 2. High-Speed CSS Print Fallback
-    this.printViaCSS(record);
+    this.printViaCSS(record, profile);
   }
 
-  private printViaCSS(record: TransactionRecord) {
+  private printViaCSS(record: TransactionRecord, profile?: ReceiptProfile) {
     if (typeof document === "undefined") return;
+
+    const sName = profile?.shopName || "ডিজিটাল সার্ভিস পয়েন্ট";
+    const sSub = profile?.subtitle || "DSP ePOS সেলস রসিদ";
+    const sPhone = profile?.phone ? `<div class="text-center text-xs text-slate-600">${profile.phone}</div>` : "";
 
     let mount = document.getElementById("epos-print-mount");
     if (!mount) {
@@ -80,8 +100,9 @@ class PrintBridge {
 
     mount.innerHTML = `
       <div class="print-receipt-container">
-        <div class="text-center font-bold text-xl">ডিজিটাল সার্ভিস পয়েন্ট</div>
-        <div class="text-center text-xs">DSP ePOS সেলস রসিদ</div>
+        <div class="text-center font-bold text-xl">${sName}</div>
+        <div class="text-center text-xs">${sSub}</div>
+        ${sPhone}
         <div class="print-divider">================================</div>
         <div class="flex-between"><span>কাস্টমার নং:</span><span class="font-bold">#${record.serial_no}</span></div>
         <div class="flex-between"><span>তারিখ:</span><span>${record.date}</span></div>
@@ -99,9 +120,11 @@ class PrintBridge {
   printLedgerReport(
     rows: DailySummaryRow[],
     periodTitle: string,
-    totals: { purchase: number; sale: number; stock: number; customers: number }
+    totals: { purchase: number; sale: number; stock: number; customers: number },
+    profile?: ReceiptProfile
   ) {
     if (typeof document === "undefined") return;
+    const sName = profile?.shopName || "ডিজিটাল সার্ভিস পয়েন্ট";
 
     let mount = document.getElementById("epos-print-mount");
     if (!mount) {
@@ -137,7 +160,7 @@ class PrintBridge {
     mount.innerHTML = `
       <div class="print-report-container">
         <div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 14px;">
-          <h1 style="font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: #0f172a;">ডিজিটাল সার্ভিস পয়েন্ট</h1>
+          <h1 style="font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: #0f172a;">${sName}</h1>
           <p style="font-size: 13px; font-weight: 600; color: #334155; margin: 0 0 4px 0;">দৈনিক ক্রয়, বিক্রয় ও স্টক খতিয়ান হিসাব রিপোর্ট</p>
           <div style="font-size: 11px; color: #64748b; display: flex; justify-content: space-between; margin-top: 6px;">
             <span>রিপোর্ট পরিধি: <strong>${periodTitle}</strong></span>
