@@ -205,7 +205,7 @@ export default function ShowroomApp() {
         <td class="font-bold text-amber-400 font-mono">#${s.serial_no}</td>
         <td class="text-slate-300">${s.time}</td>
         <td class="font-semibold text-white">কাস্টমার #${s.serial_no}</td>
-        <td class="font-bold text-lg text-emerald-400">৳${s.amount.toFixed(2)}</td>
+        <td class="amount-sale">৳${s.amount.toFixed(2)}</td>
         <td class="text-right">
           <button data-action="print" data-id="${s.id}" class="btn-secondary mr-2" title="রিসিট প্রিন্ট">
             🖨️ স্লিপ
@@ -412,7 +412,7 @@ export default function ShowroomApp() {
       tr.innerHTML = `
         <td class="text-slate-300">${p.time}</td>
         <td class="font-semibold text-white">${p.notes || "DSP মাল ক্রয়"}</td>
-        <td class="font-bold text-lg text-blue-400">৳${p.amount.toFixed(2)}</td>
+        <td class="amount-purchase">৳${p.amount.toFixed(2)}</td>
         <td class="text-right">
           <button data-action="delete" data-id="${p.id}" class="btn-danger">🗑️</button>
         </td>
@@ -755,9 +755,9 @@ export default function ShowroomApp() {
                   <h2 className="text-lg font-bold text-white">আজকের বিক্রি (কাস্টমার বাই কাস্টমার)</h2>
                   <p className="text-xs text-slate-400">প্রতিটি কাস্টমারের বিক্রির টাকা ক্রমানুসারে নিচে যোগ হচ্ছে</p>
                 </div>
-                <div className="text-right">
-                  <span className="text-xs text-slate-400 block font-medium">আজকের সর্বমোট বিক্রি:</span>
-                  <span ref={tableTotalSaleRef} className="text-2xl font-black text-emerald-400">
+                <div className="table-header-total">
+                  <span className="table-header-total-label">আজকের সর্বমোট বিক্রি:</span>
+                  <span ref={tableTotalSaleRef} className="table-header-total-amount">
                     ৳০
                   </span>
                 </div>

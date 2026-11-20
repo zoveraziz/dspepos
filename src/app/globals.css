@@ -680,6 +680,51 @@ body {
   border-bottom: 1px solid var(--border-color);
 }
 
+.table-header-total {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.table-header-total-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.table-header-total-amount {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #34d399;
+  line-height: 1.2;
+}
+
+[data-theme="light"] .table-header-total-amount {
+  color: #059669;
+}
+
+.amount-sale {
+  color: #34d399 !important;
+  font-weight: 700 !important;
+  font-size: 1.15rem !important;
+}
+
+.amount-purchase {
+  color: #60a5fa !important;
+  font-weight: 700 !important;
+  font-size: 1.15rem !important;
+}
+
+[data-theme="light"] .amount-sale {
+  color: #059669 !important;
+}
+
+[data-theme="light"] .amount-purchase {
+  color: #2563eb !important;
+}
+
 .table-footer {
   padding: 1rem 1.25rem;
   background-color: #0a0f1d;
