@@ -1067,12 +1067,13 @@ body {
    9. PROFESSIONAL SYNC SETTINGS PAGE STYLES
    ========================================================================= */
 .sync-page-container {
-  max-width: 820px;
+  width: 100%;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 1rem 0.5rem 3rem 0.5rem;
+  padding-bottom: 2.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .sync-card {
@@ -1259,13 +1260,19 @@ body {
 .sync-steps-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.85rem;
+  gap: 1rem;
   margin-top: 1rem;
 }
 
 @media (min-width: 640px) {
   .sync-steps-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .sync-steps-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 

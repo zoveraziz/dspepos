@@ -1143,7 +1143,7 @@ export default function ShowroomApp() {
                         নতুন ভার্সন আপডেট ও ক্যাশ রিফ্রেশ
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.5.3
+                        v2.5.4
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
