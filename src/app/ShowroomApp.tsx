@@ -7,8 +7,26 @@ import { printBridge } from "@/lib/print/print-bridge";
 import { initPWA } from "@/lib/pwa/pwa-client";
 import { TransactionRecord, DailySummaryRow } from "@/lib/db/types";
 import { GAS_CODE_TEMPLATE } from "@/lib/gas-template";
+import {
+  UiLang,
+  DigitMode,
+  translations,
+  formatCurrency,
+  formatDigitString,
+  formatCustomerCount,
+  formatSpeed,
+} from "@/lib/i18n";
 
 export default function ShowroomApp() {
+  // Language & Digit Mode State
+  const [uiLang, setUiLang] = useState<UiLang>("bn");
+  const [digitMode, setDigitMode] = useState<DigitMode>("en");
+  const uiLangRef = useRef<UiLang>(uiLang);
+  const digitModeRef = useRef<DigitMode>(digitMode);
+  uiLangRef.current = uiLang;
+  digitModeRef.current = digitMode;
+  const t = translations[uiLang];
+
   // Active Tab State (Explicit and reliable)
   const [activeTab, setActiveTab] = useState<"counter" | "monthly" | "purchase" | "sync">("counter");
   const [gasCopied, setGasCopied] = useState(false);
@@ -72,6 +90,17 @@ export default function ShowroomApp() {
       } else {
         document.documentElement.classList.remove("dark");
       }
+
+      const savedDigit = localStorage.getItem("dsp_digit_mode");
+      if (savedDigit === "bn" || savedDigit === "en") {
+        setDigitMode(savedDigit);
+        digitModeRef.current = savedDigit;
+      }
+      const savedLang = localStorage.getItem("dsp_ui_lang");
+      if (savedLang === "bn" || savedLang === "en") {
+        setUiLang(savedLang);
+        uiLangRef.current = savedLang;
+      }
     } catch {}
   }, []);
 
@@ -88,6 +117,29 @@ export default function ShowroomApp() {
       localStorage.setItem("dsp_epos_theme", next);
     } catch {}
   };
+
+  const toggleDigitMode = () => {
+    const next = digitMode === "en" ? "bn" : "en";
+    setDigitMode(next);
+    digitModeRef.current = next;
+    try {
+      localStorage.setItem("dsp_digit_mode", next);
+    } catch {}
+  };
+
+  const toggleUiLang = () => {
+    const next = uiLang === "bn" ? "en" : "bn";
+    setUiLang(next);
+    uiLangRef.current = next;
+    try {
+      localStorage.setItem("dsp_ui_lang", next);
+    } catch {}
+  };
+
+  useEffect(() => {
+    refreshAllData();
+    applyMonthlyFilterAndRender();
+  }, [digitMode, uiLang]);
 
   useEffect(() => {
     // Unregister stale service workers in dev
@@ -112,21 +164,22 @@ export default function ShowroomApp() {
     // Direct DOM Sync Status Listener (Clean, non-jumping badges with hover tooltip)
     const handleSyncEvent = (e: any) => {
       const { state, message } = e.detail;
+      const curLang = uiLangRef.current;
       if (syncPillRef.current) {
         syncPillRef.current.setAttribute("data-status", state);
         syncPillRef.current.title = message || state;
       }
       if (syncMsgRef.current) {
         if (state === "synced") {
-          syncMsgRef.current.textContent = "✓ সিঙ্কড";
+          syncMsgRef.current.textContent = curLang === "en" ? "✓ Synced" : "✓ সিঙ্কড";
         } else if (state === "syncing") {
-          syncMsgRef.current.textContent = "⟳ সিঙ্ক হচ্ছে...";
+          syncMsgRef.current.textContent = curLang === "en" ? "⟳ Syncing..." : "⟳ সিঙ্ক হচ্ছে...";
         } else if (state === "offline") {
-          syncMsgRef.current.textContent = "⚠️ অফলাইন";
+          syncMsgRef.current.textContent = curLang === "en" ? "⚡ Offline" : "⚡ অফলাইন";
         } else if (state === "error") {
-          syncMsgRef.current.textContent = "❌ সিঙ্ক এরর";
+          syncMsgRef.current.textContent = curLang === "en" ? "❌ Sync Error" : "❌ সিঙ্ক এরর";
         } else {
-          syncMsgRef.current.textContent = message || "অফলাইন মোড";
+          syncMsgRef.current.textContent = message || (curLang === "en" ? "Offline Mode" : "অফলাইন মোড");
         }
       }
       if (state === "synced") {
@@ -168,10 +221,13 @@ export default function ShowroomApp() {
       const todaySalesTotal = sales.reduce((acc, curr) => acc + curr.amount, 0);
       const todayPurchaseTotal = purchases.reduce((acc, curr) => acc + curr.amount, 0);
 
-      if (liveTodaySaleRef.current) liveTodaySaleRef.current.textContent = `৳${todaySalesTotal.toLocaleString("bn-BD")}`;
-      if (tableTotalSaleRef.current) tableTotalSaleRef.current.textContent = `৳${todaySalesTotal.toLocaleString("bn-BD")}`;
-      if (liveTodayPurchaseRef.current) liveTodayPurchaseRef.current.textContent = `৳${todayPurchaseTotal.toLocaleString("bn-BD")}`;
-      if (liveCustomerCountRef.current) liveCustomerCountRef.current.textContent = `${sales.length} জন`;
+      const curDigits = digitModeRef.current;
+      const curLang = uiLangRef.current;
+
+      if (liveTodaySaleRef.current) liveTodaySaleRef.current.textContent = formatCurrency(todaySalesTotal, curDigits);
+      if (tableTotalSaleRef.current) tableTotalSaleRef.current.textContent = formatCurrency(todaySalesTotal, curDigits);
+      if (liveTodayPurchaseRef.current) liveTodayPurchaseRef.current.textContent = formatCurrency(todayPurchaseTotal, curDigits);
+      if (liveCustomerCountRef.current) liveCustomerCountRef.current.textContent = formatCustomerCount(sales.length, curDigits, curLang);
 
       // 4. Load Combined Monthly Sheet Table
       const summaries = await dbManager.getDailySummaries();
@@ -185,11 +241,15 @@ export default function ShowroomApp() {
   const renderTodaySales = (sales: TransactionRecord[]) => {
     if (!todaySalesTableBodyRef.current) return;
 
+    const curDigits = digitModeRef.current;
+    const curLang = uiLangRef.current;
+    const tCur = translations[curLang];
+
     if (sales.length === 0) {
       todaySalesTableBodyRef.current.innerHTML = `
         <tr>
           <td colspan="5" class="text-center py-8 text-slate-400">
-            আজকে এখনও কোনো বিক্রি এন্ট্রি করা হয়নি। উপরে টাকার অঙ্ক লিখে Enter চাপুন।
+            ${tCur.noSalesToday}
           </td>
         </tr>
       `;
@@ -201,14 +261,19 @@ export default function ShowroomApp() {
 
     reversed.forEach((s) => {
       const tr = document.createElement("tr");
+      const serialDisplay = formatDigitString(s.serial_no, curDigits);
+      const timeDisplay = formatDigitString(s.time, curDigits);
+      const custLabel = `${tCur.customerPrefix} #${serialDisplay}`;
+      const amountDisplay = formatCurrency(s.amount, curDigits, { decimals: 2 });
+
       tr.innerHTML = `
-        <td class="font-bold text-amber-400 font-mono">#${s.serial_no}</td>
-        <td class="text-slate-300">${s.time}</td>
-        <td class="font-medium text-white">কাস্টমার #${s.serial_no}</td>
-        <td class="amount-sale">৳${s.amount.toFixed(2)}</td>
+        <td class="font-bold text-amber-400 font-mono">#${serialDisplay}</td>
+        <td class="text-slate-300">${timeDisplay}</td>
+        <td class="font-medium text-white">${custLabel}</td>
+        <td class="amount-sale">${amountDisplay}</td>
         <td class="text-right">
-          <button data-action="print" data-id="${s.id}" class="btn-table-action mr-1.5" title="রিসিট প্রিন্ট">
-            🖨️ স্লিপ
+          <button data-action="print" data-id="${s.id}" class="btn-table-action mr-1.5" title="${tCur.printSlipBtn}">
+            🖨️ ${tCur.printSlipBtn}
           </button>
           <button data-action="delete" data-id="${s.id}" class="btn-table-danger" title="মুছুন">
             🗑️
@@ -277,11 +342,15 @@ export default function ShowroomApp() {
     let totalFilteredSale = 0;
     let totalFilteredCust = 0;
 
+    const curDigits = digitModeRef.current;
+    const curLang = uiLangRef.current;
+    const tCur = translations[curLang];
+
     if (filtered.length === 0) {
       monthlyTableBodyRef.current.innerHTML = `
         <tr>
           <td colspan="5" class="text-center py-8 text-slate-400">
-            কোনো হিসাব পাওয়া যায়নি।
+            ${tCur.noLedgerData}
           </td>
         </tr>
       `;
@@ -295,14 +364,20 @@ export default function ShowroomApp() {
         const tr = document.createElement("tr");
         const isPositive = row.remaining_stock >= 0;
 
+        const dateStr = formatDigitString(row.date, curDigits);
+        const purchaseStr = formatCurrency(row.total_purchase, curDigits);
+        const saleStr = formatCurrency(row.total_sale, curDigits);
+        const stockStr = formatCurrency(row.remaining_stock, curDigits);
+        const custStr = formatCustomerCount(row.sales_count, curDigits, curLang);
+
         tr.innerHTML = `
-          <td class="font-semibold text-slate-200 font-mono">${row.date}</td>
-          <td class="font-bold text-blue-400">৳${row.total_purchase.toLocaleString("bn-BD")}</td>
-          <td class="font-bold text-emerald-400">৳${row.total_sale.toLocaleString("bn-BD")}</td>
+          <td class="font-semibold text-slate-200 font-mono">${dateStr}</td>
+          <td class="font-bold text-blue-400">${purchaseStr}</td>
+          <td class="font-bold text-emerald-400">${saleStr}</td>
           <td class="font-bold ${isPositive ? 'text-amber-400' : 'text-red-400'}">
-            ৳${row.remaining_stock.toLocaleString("bn-BD")}
+            ${stockStr}
           </td>
-          <td class="text-slate-400">${row.sales_count} জন</td>
+          <td class="text-slate-400">${custStr}</td>
         `;
         fragment.appendChild(tr);
       });
@@ -310,14 +385,14 @@ export default function ShowroomApp() {
     }
 
     const netBalance = totalFilteredPurchase - totalFilteredSale;
-    if (monthlyTotalPurchaseRef.current) monthlyTotalPurchaseRef.current.textContent = `৳${totalFilteredPurchase.toLocaleString("bn-BD")}`;
-    if (monthlyTotalSaleRef.current) monthlyTotalSaleRef.current.textContent = `৳${totalFilteredSale.toLocaleString("bn-BD")}`;
-    if (monthlyRemainingStockRef.current) monthlyRemainingStockRef.current.textContent = `৳${netBalance.toLocaleString("bn-BD")}`;
+    if (monthlyTotalPurchaseRef.current) monthlyTotalPurchaseRef.current.textContent = formatCurrency(totalFilteredPurchase, curDigits);
+    if (monthlyTotalSaleRef.current) monthlyTotalSaleRef.current.textContent = formatCurrency(totalFilteredSale, curDigits);
+    if (monthlyRemainingStockRef.current) monthlyRemainingStockRef.current.textContent = formatCurrency(netBalance, curDigits);
 
-    if (monthlyGrandTotalPurchaseRef.current) monthlyGrandTotalPurchaseRef.current.textContent = `৳${totalFilteredPurchase.toLocaleString("bn-BD")}`;
-    if (monthlyGrandTotalSaleRef.current) monthlyGrandTotalSaleRef.current.textContent = `৳${totalFilteredSale.toLocaleString("bn-BD")}`;
-    if (monthlyGrandTotalStockRef.current) monthlyGrandTotalStockRef.current.textContent = `৳${netBalance.toLocaleString("bn-BD")}`;
-    if (monthlyGrandTotalCustRef.current) monthlyGrandTotalCustRef.current.textContent = `${totalFilteredCust} জন`;
+    if (monthlyGrandTotalPurchaseRef.current) monthlyGrandTotalPurchaseRef.current.textContent = formatCurrency(totalFilteredPurchase, curDigits);
+    if (monthlyGrandTotalSaleRef.current) monthlyGrandTotalSaleRef.current.textContent = formatCurrency(totalFilteredSale, curDigits);
+    if (monthlyGrandTotalStockRef.current) monthlyGrandTotalStockRef.current.textContent = formatCurrency(netBalance, curDigits);
+    if (monthlyGrandTotalCustRef.current) monthlyGrandTotalCustRef.current.textContent = formatCustomerCount(totalFilteredCust, curDigits, curLang);
   };
 
   // Render Monthly Combined Table (ক্রয় | বিক্রি | অবশিষ্ট স্টক)
@@ -329,8 +404,9 @@ export default function ShowroomApp() {
   // Export Filtered Monthly Summaries as CSV for Excel (UTF-8 BOM encoded)
   const handleExportCSV = () => {
     const rows = filteredMonthlySummariesRef.current || [];
+    const curLang = uiLangRef.current;
     if (rows.length === 0) {
-      alert("ডাউনলোড করার মতো কোনো হিসাব নেই।");
+      alert(curLang === "en" ? "No records to export." : "ডাউনলোড করার মতো কোনো হিসাব নেই।");
       return;
     }
 
@@ -338,7 +414,9 @@ export default function ShowroomApp() {
     let totalSale = 0;
     let totalCust = 0;
 
-    let csv = "তারিখ,মাল ক্রয় (টাকা),মাল বিক্রি (টাকা),অবশিষ্ট স্টক / ব্যালেন্স (টাকা),মোট কাস্টমার সংখ্যা\r\n";
+    let csv = curLang === "en"
+      ? "Date,Purchases (BDT),Sales (BDT),Closing Stock (BDT),Customer Count\r\n"
+      : "তারিখ,মাল ক্রয় (টাকা),মাল বিক্রি (টাকা),অবশিষ্ট স্টক / ব্যালেন্স (টাকা),মোট কাস্টমার সংখ্যা\r\n";
 
     rows.forEach((r) => {
       totalPurch += r.total_purchase;
@@ -348,14 +426,15 @@ export default function ShowroomApp() {
     });
 
     const netBal = totalPurch - totalSale;
-    csv += `"মোট সর্বমোট হিসাব",${totalPurch.toFixed(2)},${totalSale.toFixed(2)},${netBal.toFixed(2)},${totalCust}\r\n`;
+    const totalLabel = curLang === "en" ? "Grand Total Summary" : "মোট সর্বমোট হিসাব";
+    csv += `"${totalLabel}",${totalPurch.toFixed(2)},${totalSale.toFixed(2)},${netBal.toFixed(2)},${totalCust}\r\n`;
 
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     const today = new Date().toISOString().split("T")[0];
     a.href = url;
-    a.download = `DSP_দৈনিক_স্টক_খতিয়ান_${today}.csv`;
+    a.download = `DSP_Ledger_${today}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -375,12 +454,13 @@ export default function ShowroomApp() {
       totalCust += r.sales_count;
     });
 
-    let periodTitle = "সব দিন";
-    if (dateFilterPreset === "today") periodTitle = "আজকের হিসাব";
-    else if (dateFilterPreset === "7days") periodTitle = "গত ৭ দিনের হিসাব";
-    else if (dateFilterPreset === "month") periodTitle = "চলতি মাসের হিসাব";
+    const curLang = uiLangRef.current;
+    let periodTitle = curLang === "en" ? "All Time" : "সব দিন";
+    if (dateFilterPreset === "today") periodTitle = curLang === "en" ? "Today's Ledger" : "আজকের হিসাব";
+    else if (dateFilterPreset === "7days") periodTitle = curLang === "en" ? "Last 7 Days Ledger" : "গত ৭ দিনের হিসাব";
+    else if (dateFilterPreset === "month") periodTitle = curLang === "en" ? "This Month's Ledger" : "চলতি মাসের হিসাব";
     else if (dateFilterPreset === "custom") {
-      periodTitle = `${customFromDate || "শুরু"} থেকে ${customToDate || "আজ"}`;
+      periodTitle = `${customFromDate || (curLang === "en" ? "Start" : "শুরু")} - ${customToDate || (curLang === "en" ? "Today" : "আজ")}`;
     }
 
     printBridge.printLedgerReport(rows, periodTitle, {
@@ -395,11 +475,15 @@ export default function ShowroomApp() {
   const renderTodayPurchases = (purchases: TransactionRecord[]) => {
     if (!purchasesTableBodyRef.current) return;
 
+    const curDigits = digitModeRef.current;
+    const curLang = uiLangRef.current;
+    const tCur = translations[curLang];
+
     if (purchases.length === 0) {
       purchasesTableBodyRef.current.innerHTML = `
         <tr>
           <td colspan="4" class="text-center py-6 text-slate-400">
-            আজকে কোনো মাল ক্রয় এন্ট্রি করা হয়নি।
+            ${tCur.noPurchasesToday}
           </td>
         </tr>
       `;
@@ -409,10 +493,14 @@ export default function ShowroomApp() {
     const fragment = document.createDocumentFragment();
     purchases.forEach((p) => {
       const tr = document.createElement("tr");
+      const timeDisplay = formatDigitString(p.time, curDigits);
+      const amountDisplay = formatCurrency(p.amount, curDigits, { decimals: 2 });
+      const notesDisplay = p.notes || tCur.defaultPurchaseNote;
+
       tr.innerHTML = `
-        <td class="text-slate-300">${p.time}</td>
-        <td class="font-medium text-white">${p.notes || "DSP মাল ক্রয়"}</td>
-        <td class="amount-purchase">৳${p.amount.toFixed(2)}</td>
+        <td class="text-slate-300">${timeDisplay}</td>
+        <td class="font-medium text-white">${notesDisplay}</td>
+        <td class="amount-purchase">${amountDisplay}</td>
         <td class="text-right">
           <button data-action="delete" data-id="${p.id}" class="btn-table-danger" title="মুছুন">🗑️</button>
         </td>
@@ -593,8 +681,8 @@ export default function ShowroomApp() {
         <div className="header-inner">
           <div className="header-brand">
             <span className="brand-badge">DSP</span>
-            <h1 className="text-xl font-bold tracking-tight text-white">ডিজিটাল সার্ভিস পয়েন্ট</h1>
-            <span className="text-xs text-amber-300 font-semibold hidden sm:inline">DSP ePOS</span>
+            <h1 className="text-xl font-bold tracking-tight text-white">{t.brandTitle}</h1>
+            <span className="text-xs text-amber-300 font-semibold hidden sm:inline">{t.brandSub}</span>
           </div>
 
           <div className="header-actions">
@@ -605,15 +693,35 @@ export default function ShowroomApp() {
               title="মোড পরিবর্তন করুন (লাইট / ডার্ক)"
             >
               {theme === "dark" ? (
-                <span>☀️ লাইট<span className="hidden sm:inline"> মোড</span></span>
+                <span>☀️ <span className="hidden sm:inline">{t.lightMode}</span></span>
               ) : (
-                <span>🌙 ডার্ক<span className="hidden sm:inline"> মোড</span></span>
+                <span>🌙 <span className="hidden sm:inline">{t.darkMode}</span></span>
               )}
+            </button>
+
+            {/* Digit Language Toggle: 123 (English) vs ১২৩ (Bengali) */}
+            <button
+              type="button"
+              onClick={toggleDigitMode}
+              className="btn-header-pill cursor-pointer"
+              title={t.digitToggleTitle}
+            >
+              <span>🔢 {digitMode === "en" ? "123" : "১২৩"}</span>
+            </button>
+
+            {/* UI Language Toggle: বাংলা vs English */}
+            <button
+              type="button"
+              onClick={toggleUiLang}
+              className="btn-header-pill cursor-pointer"
+              title={t.langToggleTitle}
+            >
+              <span>🌐 {uiLang === "bn" ? "বাং" : "EN"}</span>
             </button>
 
             <div ref={syncPillRef} className="sync-status-pill" data-status="idle" title="গুগল শিট সিঙ্ক স্ট্যাটাস">
               <span className="inline-block w-2 h-2 rounded-full bg-current"></span>
-              <span ref={syncMsgRef}>অফলাইন মোড</span>
+              <span ref={syncMsgRef}>{uiLang === "en" ? "Offline Mode" : "অফলাইন মোড"}</span>
             </div>
 
             <button
@@ -621,9 +729,9 @@ export default function ShowroomApp() {
               type="button"
               onClick={handleConnectPrinter}
               className="btn-header-printer cursor-pointer"
-              title="ক্যাশ কাউন্টারের থার্মাল প্রিন্টার যুক্ত করুন"
+              title={uiLang === "en" ? "Connect Hardware Thermal Printer" : "ক্যাশ কাউন্টারের থার্মাল প্রিন্টার যুক্ত করুন"}
             >
-              <span>🔌 <span className="hidden sm:inline">থার্মাল </span>প্রিন্টার</span>
+              <span>🔌 <span className="hidden sm:inline">{uiLang === "en" ? "Thermal " : "থার্মাল "}</span>{uiLang === "en" ? "Printer" : "প্রিন্টার"}</span>
             </button>
           </div>
         </div>
@@ -633,30 +741,30 @@ export default function ShowroomApp() {
       <div className="kpi-section">
         <div className="kpi-grid">
           <div className="kpi-card kpi-card-emerald">
-            <div className="kpi-label">💰 সর্বমোট আজকের বিক্রি</div>
+            <div className="kpi-label">{t.kpiSales}</div>
             <div ref={liveTodaySaleRef} className="kpi-value kpi-value-emerald">
-              ৳০
+              {formatCurrency(0, digitMode)}
             </div>
           </div>
 
           <div className="kpi-card kpi-card-blue">
-            <div className="kpi-label">📦 আজকের মাল ক্রয়</div>
+            <div className="kpi-label">{t.kpiPurchase}</div>
             <div ref={liveTodayPurchaseRef} className="kpi-value kpi-value-blue">
-              ৳০
+              {formatCurrency(0, digitMode)}
             </div>
           </div>
 
           <div className="kpi-card kpi-card-amber">
-            <div className="kpi-label">👥 আজকের মোট কাস্টমার</div>
+            <div className="kpi-label">{t.kpiCustomers}</div>
             <div ref={liveCustomerCountRef} className="kpi-value kpi-value-amber">
-              ০ জন
+              {formatCustomerCount(0, digitMode, uiLang)}
             </div>
           </div>
 
           <div className="kpi-card kpi-card-purple">
-            <div className="kpi-label">⚡ সিস্টেম স্পিড</div>
+            <div className="kpi-label">{t.kpiSpeed}</div>
             <div className="kpi-value kpi-value-purple">
-              0ms অফলাইন
+              {formatSpeed(0, digitMode, uiLang)}
             </div>
           </div>
         </div>
@@ -670,28 +778,28 @@ export default function ShowroomApp() {
             onClick={() => setActiveTab("counter")}
             className={`tab-btn ${activeTab === "counter" ? "tab-btn-active" : ""}`}
           >
-            ⚡ ম্যানেজারের সেলস কাউন্টার (আজকের বিক্রি)
+            ⚡ {t.tabCounter}
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("monthly")}
             className={`tab-btn ${activeTab === "monthly" ? "tab-btn-active" : ""}`}
           >
-            📊 মাসের হিসাব ও স্টক শিট (গুগল শিট ফরম্যাট)
+            📊 {t.tabMonthly}
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("purchase")}
             className={`tab-btn ${activeTab === "purchase" ? "tab-btn-active" : ""}`}
           >
-            📦 মাল ক্রয় এন্ট্রি (মালিকের ডেস্ক)
+            📦 {t.tabPurchase}
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("sync")}
             className={`tab-btn ${activeTab === "sync" ? "tab-btn-active" : ""}`}
           >
-            ⚙️ গুগল শিট সিঙ্ক
+            ⚙️ {t.tabSync}
           </button>
         </div>
       </nav>
@@ -705,10 +813,10 @@ export default function ShowroomApp() {
             <div className="pos-hero-card">
               <div className="pos-hero-header">
                 <div className="pos-hero-title">
-                  <span>⚡ ক্যাশ কাউন্টার - দ্রুত বিক্রি এন্ট্রি</span>
+                  <span>⚡ {t.counterCardTitle}</span>
                 </div>
                 <div className="text-xs text-slate-400 hidden sm:block">
-                  টাকার অঙ্ক লিখে কিবোর্ডের <kbd className="pos-key-badge">Enter ↵</kbd> চাপলেই বিক্রি সেভ হবে
+                  {t.counterShortcutHint}
                 </div>
               </div>
 
@@ -721,7 +829,7 @@ export default function ShowroomApp() {
                       type="number"
                       step="any"
                       min="1"
-                      placeholder="টাকার পরিমাণ লিখুন (যেমন: ৫০০)"
+                      placeholder={t.counterPlaceholder}
                       className="pos-amount-input"
                       required
                       autoComplete="off"
@@ -731,7 +839,7 @@ export default function ShowroomApp() {
                     type="submit"
                     className="pos-submit-button"
                   >
-                    <span>✓ বিক্রি যোগ করুন</span>
+                    <span>✓ {t.counterAddBtn}</span>
                     <kbd className="pos-key-badge">Enter ↵</kbd>
                   </button>
                 </div>
@@ -739,14 +847,14 @@ export default function ShowroomApp() {
                 {/* Controls Bar */}
                 <div className="pos-controls-row">
                   <span className="text-xs text-slate-400">
-                    💡 কোনো নাম লেখার প্রয়োজন নেই, শুধু বিক্রির টাকা লিখে এন্টার দিন
+                    💡 {t.counterHelper}
                   </span>
                   <label className="pos-checkbox-label">
                     <input
                       ref={autoPrintCheckboxRef}
                       type="checkbox"
                     />
-                    <span>এন্ট্রি সাথে সাথে প্রিন্ট স্লিপ দিন</span>
+                    <span>{t.counterAutoPrint}</span>
                   </label>
                 </div>
               </form>
@@ -756,13 +864,13 @@ export default function ShowroomApp() {
             <div className="table-card">
               <div className="table-header">
                 <div>
-                  <h2 className="table-title">আজকের বিক্রি</h2>
-                  <p className="table-subtitle">প্রতিটি কাস্টমারের বিক্রির টাকা ক্রমানুসারে নিচে যোগ হচ্ছে</p>
+                  <h2 className="table-title">{t.tableSalesTitle}</h2>
+                  <p className="table-subtitle">{t.tableSalesSubtitle}</p>
                 </div>
                 <div className="table-header-total">
-                  <span className="table-header-total-label">আজকের সর্বমোট বিক্রি:</span>
+                  <span className="table-header-total-label">{t.tableGrandTotalLabel}</span>
                   <span ref={tableTotalSaleRef} className="table-header-total-amount">
-                    ৳০
+                    {formatCurrency(0, digitMode)}
                   </span>
                 </div>
               </div>
@@ -771,11 +879,11 @@ export default function ShowroomApp() {
                 <table className="data-table" onClick={handleTableClick}>
                   <thead>
                     <tr>
-                      <th>ক্রমিক</th>
-                      <th>সময়</th>
-                      <th>বিবরণ</th>
-                      <th>বিক্রির টাকা (৳)</th>
-                      <th className="text-right">অ্যাকশন</th>
+                      <th>{t.colSerial}</th>
+                      <th>{t.colTime}</th>
+                      <th>{t.colDesc}</th>
+                      <th>{t.colSaleAmount}</th>
+                      <th className="text-right">{t.colAction}</th>
                     </tr>
                   </thead>
                   <tbody ref={todaySalesTableBodyRef}>
@@ -792,23 +900,23 @@ export default function ShowroomApp() {
           <div className="space-y-6 w-full">
             <div className="monthly-kpi-grid">
               <div className="monthly-kpi-card monthly-kpi-card-blue">
-                <div className="monthly-kpi-title">📦 মাসের সর্বমোট মাল ক্রয়</div>
+                <div className="monthly-kpi-title">📦 {t.monthlyPurchaseTitle}</div>
                 <div ref={monthlyTotalPurchaseRef} className="monthly-kpi-val text-blue-400">
-                  ৳০
+                  {formatCurrency(0, digitMode)}
                 </div>
               </div>
 
               <div className="monthly-kpi-card monthly-kpi-card-emerald">
-                <div className="monthly-kpi-title">💰 মাসের সর্বমোট মাল বিক্রি</div>
+                <div className="monthly-kpi-title">💰 {t.monthlySaleTitle}</div>
                 <div ref={monthlyTotalSaleRef} className="monthly-kpi-val text-emerald-400">
-                  ৳০
+                  {formatCurrency(0, digitMode)}
                 </div>
               </div>
 
               <div className="monthly-kpi-card monthly-kpi-card-amber">
-                <div className="monthly-kpi-title">📊 অবশিষ্ট স্টক / ব্যালেন্স</div>
+                <div className="monthly-kpi-title">📊 {t.monthlyStockTitle}</div>
                 <div ref={monthlyRemainingStockRef} className="monthly-kpi-val text-amber-400">
-                  ৳০
+                  {formatCurrency(0, digitMode)}
                 </div>
               </div>
             </div>
@@ -816,68 +924,68 @@ export default function ShowroomApp() {
             <div className="table-card">
               <div className="table-header">
                 <div>
-                  <h2 className="table-title">দৈনিক ক্রয়, বিক্রি ও অবশিষ্ট স্টক শিট</h2>
-                  <p className="table-subtitle">প্রতিদিনের হিসাব এক কলামে ক্রয়, এক কলামে বিক্রি এবং এক কলামে অবশিষ্ট স্টক</p>
+                  <h2 className="table-title">{t.ledgerTitle}</h2>
+                  <p className="table-subtitle">{t.ledgerSubtitle}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => refreshAllData()}
                   className="btn-secondary text-xs cursor-pointer"
                 >
-                  🔄 রিফ্রেশ হিসাব
+                  🔄 {uiLang === "en" ? "Refresh" : "রিফ্রেশ হিসাব"}
                 </button>
               </div>
 
               {/* Toolbar: Filter Pills, Date Picker, Live Search, Excel/CSV Export & A4 Print */}
               <div className="ledger-toolbar">
                 <div className="ledger-filter-group">
-                  <span className="text-xs text-slate-400 font-bold mr-1">ফিল্টার:</span>
+                  <span className="text-xs text-slate-400 font-bold mr-1">{uiLang === "en" ? "Filter:" : "ফিল্টার:"}</span>
                   <button
                     type="button"
                     onClick={() => setDateFilterPreset("all")}
                     className={`filter-pill ${dateFilterPreset === "all" ? "filter-pill-active" : ""}`}
                   >
-                    সব দিন
+                    {t.filterAll}
                   </button>
                   <button
                     type="button"
                     onClick={() => setDateFilterPreset("today")}
                     className={`filter-pill ${dateFilterPreset === "today" ? "filter-pill-active" : ""}`}
                   >
-                    আজকে
+                    {t.filterToday}
                   </button>
                   <button
                     type="button"
                     onClick={() => setDateFilterPreset("7days")}
                     className={`filter-pill ${dateFilterPreset === "7days" ? "filter-pill-active" : ""}`}
                   >
-                    গত ৭ দিন
+                    {t.filter7Days}
                   </button>
                   <button
                     type="button"
                     onClick={() => setDateFilterPreset("month")}
                     className={`filter-pill ${dateFilterPreset === "month" ? "filter-pill-active" : ""}`}
                   >
-                    চলতি মাস
+                    {t.filterMonth}
                   </button>
                   <button
                     type="button"
                     onClick={() => setDateFilterPreset("custom")}
                     className={`filter-pill ${dateFilterPreset === "custom" ? "filter-pill-active" : ""}`}
                   >
-                    কাস্টম তারিখ ▾
+                    {t.filterCustom}
                   </button>
 
                   {dateFilterPreset === "custom" && (
                     <div className="ledger-custom-date">
-                      <span>হতে:</span>
+                      <span>{uiLang === "en" ? "From:" : "হতে:"}</span>
                       <input
                         type="date"
                         value={customFromDate}
                         onChange={(e) => setCustomFromDate(e.target.value)}
                         className="ledger-date-input"
                       />
-                      <span>পর্যন্ত:</span>
+                      <span>{uiLang === "en" ? "To:" : "পর্যন্ত:"}</span>
                       <input
                         type="date"
                         value={customToDate}
@@ -891,7 +999,7 @@ export default function ShowroomApp() {
                     type="text"
                     value={ledgerSearch}
                     onChange={(e) => setLedgerSearch(e.target.value)}
-                    placeholder="🔍 তারিখ বা টাকা খুঁজুন..."
+                    placeholder={t.searchPlaceholder}
                     className="ledger-date-input ml-1"
                     style={{ minWidth: "210px" }}
                   />
@@ -902,17 +1010,17 @@ export default function ShowroomApp() {
                     type="button"
                     onClick={handleExportCSV}
                     className="btn-export-excel"
-                    title="মাইক্রোসফট এক্সেলে খতিয়ান ডাউনলোড করুন (বাংলা ফন্ট সাপোর্ট সহ)"
+                    title={uiLang === "en" ? "Download as Excel / CSV" : "মাইক্রোসফট এক্সেলে খতিয়ান ডাউনলোড করুন (বাংলা ফন্ট সাপোর্ট সহ)"}
                   >
-                    📥 এক্সেল (CSV) ডাউনলোড
+                    📥 {t.exportExcel}
                   </button>
                   <button
                     type="button"
                     onClick={handlePrintReport}
                     className="btn-export-print"
-                    title="পুরো খতিয়ান বিবরণী A4 পেপারে প্রিন্ট বা PDF সেভ করুন"
+                    title={uiLang === "en" ? "Print or Save as A4 PDF" : "পুরো খতিয়ান বিবরণী A4 পেপারে প্রিন্ট বা PDF সেভ করুন"}
                   >
-                    🖨️ খতিয়ান রিপোর্ট প্রিন্ট (A4)
+                    🖨️ {t.exportPrint}
                   </button>
                 </div>
               </div>
@@ -921,11 +1029,11 @@ export default function ShowroomApp() {
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>তারিখ</th>
-                      <th>মাল ক্রয় (৳)</th>
-                      <th>মাল বিক্রি (৳)</th>
-                      <th>অবশিষ্ট স্টক / ব্যালেন্স (৳)</th>
-                      <th>মোট কাস্টমার</th>
+                      <th>{t.colDate}</th>
+                      <th>{t.colTotalPurchase}</th>
+                      <th>{t.colTotalSale}</th>
+                      <th>{t.colRemainingStock}</th>
+                      <th>{t.colTotalCust}</th>
                     </tr>
                   </thead>
                   <tbody ref={monthlyTableBodyRef}>
@@ -933,11 +1041,11 @@ export default function ShowroomApp() {
                   </tbody>
                   <tfoot>
                     <tr className="ledger-footer-total">
-                      <td className="text-white font-bold">মোট সর্বমোট হিসাব</td>
-                      <td ref={monthlyGrandTotalPurchaseRef} className="font-bold text-blue-400">৳০</td>
-                      <td ref={monthlyGrandTotalSaleRef} className="font-bold text-emerald-400">৳০</td>
-                      <td ref={monthlyGrandTotalStockRef} className="font-bold text-amber-400">৳০</td>
-                      <td ref={monthlyGrandTotalCustRef} className="font-bold text-slate-300">০ জন</td>
+                      <td className="text-white font-bold">{t.grandTotalLabel}</td>
+                      <td ref={monthlyGrandTotalPurchaseRef} className="font-bold text-blue-400">{formatCurrency(0, digitMode)}</td>
+                      <td ref={monthlyGrandTotalSaleRef} className="font-bold text-emerald-400">{formatCurrency(0, digitMode)}</td>
+                      <td ref={monthlyGrandTotalStockRef} className="font-bold text-amber-400">{formatCurrency(0, digitMode)}</td>
+                      <td ref={monthlyGrandTotalCustRef} className="font-bold text-slate-300">{formatCustomerCount(0, digitMode, uiLang)}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -950,52 +1058,52 @@ export default function ShowroomApp() {
         {activeTab === "purchase" && (
           <div className="space-y-6 w-full">
             <div className="table-card p-6 border-2 border-blue-500/40">
-              <h2 className="table-title mb-1">📦 মাল ক্রয় এন্ট্রি (মালিকের হিসাব)</h2>
+              <h2 className="table-title mb-1">📦 {t.purchaseCardTitle}</h2>
               <p className="table-subtitle mb-4">
-                শোরুমের জন্য আজ কত টাকার মাল ক্রয় করেছেন তা এখানে যোগ করুন। এটি স্বয়ংক্রিয়ভাবে স্টক শিটে যোগ হবে।
+                {t.purchaseCardSubtitle}
               </p>
 
               <form onSubmit={handlePurchaseSubmit} className="space-y-4">
                 <div className="form-group">
-                  <label>আজকের মাল ক্রয়ের টাকা (৳) *</label>
+                  <label>{t.purchaseAmountLabel}</label>
                   <input
                     ref={purchaseAmountInputRef}
                     type="number"
                     step="any"
                     min="1"
-                    placeholder="যেমন: ২৫০০০"
+                    placeholder={t.purchaseAmountPlaceholder}
                     className="form-input text-lg font-bold text-blue-400"
                     required
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>বিবরণ / চালানের নোট (ঐচ্ছিক)</label>
+                  <label>{t.purchaseNotesLabel}</label>
                   <input
                     ref={purchaseNotesInputRef}
-                    placeholder="যেমন: কারখানার মিষ্টি ও কেক চালান"
+                    placeholder={t.purchaseNotesPlaceholder}
                     className="form-input"
                   />
                 </div>
 
                 <button type="submit" className="btn-primary w-full justify-center py-3 text-base cursor-pointer">
-                  + আজকের ক্রয় হিসেবে যুক্ত করুন
+                  {t.purchaseAddBtn}
                 </button>
               </form>
             </div>
 
             <div className="table-card">
               <div className="table-header">
-                <h3 className="table-title">আজকের মাল ক্রয়ের তালিকা</h3>
+                <h3 className="table-title">{t.purchaseTableTitle}</h3>
               </div>
               <div className="table-wrapper">
                 <table className="data-table" onClick={handlePurchaseTableClick}>
                   <thead>
                     <tr>
-                      <th>সময়</th>
-                      <th>বিবরণ</th>
-                      <th>টাকার পরিমাণ (৳)</th>
-                      <th className="text-right">অ্যাকশন</th>
+                      <th>{t.colTime}</th>
+                      <th>{t.colDesc}</th>
+                      <th>{uiLang === "en" ? "Amount (৳)" : "টাকার পরিমাণ (৳)"}</th>
+                      <th className="text-right">{t.colAction}</th>
                     </tr>
                   </thead>
                   <tbody ref={purchasesTableBodyRef}>
@@ -1019,13 +1127,13 @@ export default function ShowroomApp() {
                   </div>
                   <div>
                     <h2 className="sync-card-title">
-                      গুগল শিট ২-মুখী অটো সিঙ্ক
+                      {t.syncCard1Title}
                       <span className="sync-badge sync-badge-emerald">
-                        লাইভ ব্যাকআপ
+                        {t.syncCard1Badge}
                       </span>
                     </h2>
                     <p className="sync-card-desc">
-                      মোবাইল, পিসি এবং গুগল স্প্রেডশিটে স্বয়ংক্রিয়ভাবে লেনদেন সিঙ্ক ও ব্যাকআপ রাখুন।
+                      {t.syncCard1Desc}
                     </p>
                   </div>
                 </div>
@@ -1035,35 +1143,35 @@ export default function ShowroomApp() {
                 <div className="form-group">
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                     <label style={{ fontWeight: 600, color: "var(--text-main)" }}>
-                      🔗 Google Apps Script Web App URL
+                      🔗 {t.gasUrlLabel}
                     </label>
                     <span style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "monospace" }}>
-                      POST /exec Endpoint
+                      {t.gasEndpointLabel}
                     </span>
                   </div>
                   <input
                     ref={gasUrlInputRef}
                     type="url"
                     defaultValue={syncEngine.getEndpointUrl()}
-                    placeholder="https://script.google.com/macros/s/.../exec"
+                    placeholder={t.gasUrlPlaceholder}
                     className="sync-input-field"
                     required
                   />
                   <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px" }}>
-                    * আপনার স্প্রেডশিট থেকে প্রাপ্ত Apps Script Web App ডেপ্লয়মেন্ট URL লিংকটি এখানে বসান।
+                    {t.gasUrlHint}
                   </p>
                 </div>
 
                 <div className="sync-button-group">
                   <button type="submit" className="btn-sync-submit">
-                    <span>💾</span> সেভ ও টেস্ট সিঙ্ক
+                    <span>💾</span> {t.saveAndTestSyncBtn}
                   </button>
                   <button
                     type="button"
                     onClick={() => syncEngine.triggerSync()}
                     className="btn-sync-now"
                   >
-                    <span>🔄</span> এখনই সিঙ্ক করুন
+                    <span>🔄</span> {t.syncNowBtn}
                   </button>
                 </div>
               </form>
@@ -1077,8 +1185,8 @@ export default function ShowroomApp() {
                     📋
                   </div>
                   <div>
-                    <h3 className="sync-card-title">গুগল শিট যুক্ত করার সহজ নিয়ম</h3>
-                    <p className="sync-card-desc">মাত্র ৪টি সহজ ধাপে সম্পূর্ণ ফ্রিতে সিঙ্ক চালু করুন</p>
+                    <h3 className="sync-card-title">{t.syncCard2Title}</h3>
+                    <p className="sync-card-desc">{t.syncCard2Desc}</p>
                   </div>
                 </div>
 
@@ -1087,44 +1195,44 @@ export default function ShowroomApp() {
                   onClick={handleCopyGasCode}
                   className="btn-copy-code"
                 >
-                  <span>📋</span> {gasCopied ? "✓ কোড কপি হয়েছে!" : "Apps Script কোড কপি করুন"}
+                  <span>📋</span> {gasCopied ? t.copiedCodeBtn : t.copyCodeBtn}
                 </button>
               </div>
 
               <div className="sync-steps-grid">
                 {/* Step 1 */}
                 <div className="sync-step-box">
-                  <div className="sync-step-num">০১</div>
+                  <div className="sync-step-num">{formatDigitString("01", digitMode)}</div>
                   <div className="sync-step-content">
-                    <h4>নতুন স্প্রেডশিট খুলুন</h4>
-                    <p>গুগল ড্রাইভে গিয়ে একটি নতুন গুগল স্প্রেডশিট (Google Sheet) তৈরি করুন।</p>
+                    <h4>{t.step1Title}</h4>
+                    <p>{t.step1Desc}</p>
                   </div>
                 </div>
 
                 {/* Step 2 */}
                 <div className="sync-step-box">
-                  <div className="sync-step-num">০২</div>
+                  <div className="sync-step-num">{formatDigitString("02", digitMode)}</div>
                   <div className="sync-step-content">
-                    <h4>Apps Script-এ যান</h4>
-                    <p>শিটের ওপরের মেনু থেকে Extensions &gt; Apps Script ওপেন করুন।</p>
+                    <h4>{t.step2Title}</h4>
+                    <p>{t.step2Desc}</p>
                   </div>
                 </div>
 
                 {/* Step 3 */}
                 <div className="sync-step-box">
-                  <div className="sync-step-num">০৩</div>
+                  <div className="sync-step-num">{formatDigitString("03", digitMode)}</div>
                   <div className="sync-step-content">
-                    <h4>কোড পেস্ট ও Web app ডেপ্লয়</h4>
-                    <p>পুরনো কোড মুছে আমাদের দেওয়া কোড পেস্ট করুন এবং Deploy &gt; Web app হিসেবে ডেপ্লয় করুন (Who has access: Anyone)।</p>
+                    <h4>{t.step3Title}</h4>
+                    <p>{t.step3Desc}</p>
                   </div>
                 </div>
 
                 {/* Step 4 */}
                 <div className="sync-step-box">
-                  <div className="sync-step-num">০৪</div>
+                  <div className="sync-step-num">{formatDigitString("04", digitMode)}</div>
                   <div className="sync-step-content">
-                    <h4>লিংক সেভ ও চালু</h4>
-                    <p>পাওয়া ওয়েব অ্যাপ লিঙ্কটি ওপরের বক্সে পেস্ট করে "সেভ ও টেস্ট সিঙ্ক" বাটনে চাপ দিন।</p>
+                    <h4>{t.step4Title}</h4>
+                    <p>{t.step4Desc}</p>
                   </div>
                 </div>
               </div>
@@ -1140,14 +1248,14 @@ export default function ShowroomApp() {
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                       <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#fbbf24" }}>
-                        নতুন ভার্সন আপডেট ও ক্যাশ রিফ্রেশ
+                        {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.5.4
+                        v2.5.5
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
-                      মোবাইল বা পিসিতে পুরোনো ক্যাশের কারণে সিঙ্ক আটকে থাকলে বা নতুন কোনো আপডেট না দেখালে এই বাটনে চাপ দিন। এটি ব্রাউজারের পুরোনো ফাইল পরিষ্কার করে সরাসরি লেটেস্ট ভার্সন লোড করবে।
+                      {t.syncCard3Desc}
                     </p>
                   </div>
                 </div>
@@ -1157,7 +1265,7 @@ export default function ShowroomApp() {
                   onClick={handleForceUpdate}
                   className="btn-warning-action"
                 >
-                  <span>🔄</span> ক্যাশ ক্লিয়ার ও আপডেট
+                  <span>🔄</span> {t.forceUpdateBtn}
                 </button>
               </div>
             </div>
@@ -1172,14 +1280,14 @@ export default function ShowroomApp() {
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                       <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#f87171" }}>
-                        সিস্টেম ফ্রেশ রিসেট (নতুন করে শুরু)
+                        {t.syncCard4Title}
                       </h3>
                       <span className="sync-badge sync-badge-red">
-                        বিপদজনক অঞ্চল
+                        {t.syncCard4Badge}
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
-                      টেস্টিংয়ের সময় যোগ করা সমস্ত বিক্রি ও ক্রয়ের হিসাব গুগল শিট এবং লোকাল ডাটাবেজ থেকে মুছে কাস্টমার সিরিয়াল ও স্টক হিসাব একদম #১ থেকে ফ্রেশ শুরু করতে নিচের বাটনে চাপ দিন।
+                      {t.syncCard4Desc}
                     </p>
                   </div>
                 </div>
@@ -1189,7 +1297,7 @@ export default function ShowroomApp() {
                   onClick={handleClearAllData}
                   className="btn-danger-action"
                 >
-                  <span>🗑️</span> সমস্ত ডাটা মুছুন (রিসেট)
+                  <span>🗑️</span> {t.resetBtn}
                 </button>
               </div>
             </div>

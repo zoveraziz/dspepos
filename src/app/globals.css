@@ -154,10 +154,38 @@ body {
   background-color: var(--border-color);
 }
 
-[data-theme="light"] .btn-header-printer {
+.btn-header-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  transition: all 120ms ease;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+.btn-header-pill:hover {
+  background-color: var(--border-color);
+}
+
+[data-theme="light"] .btn-header-printer,
+[data-theme="light"] .btn-header-pill {
   background-color: #ffffff;
   color: #1e293b;
   border-color: #cbd5e1;
+}
+
+[data-theme="light"] .btn-header-pill:hover {
+  background-color: #f1f5f9;
 }
 
 .monthly-kpi-grid {
@@ -253,7 +281,8 @@ body {
   }
   .btn-theme-toggle,
   .sync-status-pill,
-  .btn-header-printer {
+  .btn-header-printer,
+  .btn-header-pill {
     font-size: 0.75rem;
     padding: 0.28rem 0.55rem;
     height: 30px;
