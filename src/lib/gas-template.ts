@@ -41,6 +41,117 @@ function normalizeDate(d) {
   return str;
 }
 
+/**
+ * সমস্ত শিট, হেডার ও 'রোল_ও_নিয়মাবলী' ট্যাব স্বয়ংক্রিয়ভাবে নিশ্চিত করার ফাংশন
+ */
+function ensureSheets(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Sheet 1: দৈনিক ক্রয়, বিক্রি ও অবশিষ্ট স্টক
+  var summarySheet = ss.getSheetByName("দৈনিক_ক্রয়_বিক্রয়_স্টক");
+  if (!summarySheet) {
+    summarySheet = ss.insertSheet("দৈনিক_ক্রয়_বিক্রয়_স্টক", 0);
+    summarySheet.appendRow([
+      "তারিখ", "মাল ক্রয় (৳)", "মাল বিক্রি (৳)", "অবশিষ্ট স্টক (৳)", "কাস্টমার সংখ্যা", "সর্বশেষ আপডেট"
+    ]);
+    summarySheet.getRange(1, 1, 1, 6)
+      .setFontWeight("bold")
+      .setBackground("#0f172a")
+      .setFontColor("#ffffff");
+    summarySheet.setFrozenRows(1);
+  }
+
+  // Sheet 2: লেনদেন বিস্তারিত লগ (অপারেটর কলাম সহ)
+  var logSheet = ss.getSheetByName("লেনদেন_বিস্তারিত");
+  if (!logSheet) {
+    logSheet = ss.insertSheet("লেনদেন_বিস্তারিত", 1);
+    logSheet.appendRow([
+      "আইডি", "তারিখ", "সময়", "ধরন", "টাকার পরিমাণ", "কাস্টমার নং", "বিবরণ / নোট", "অপারেটর", "আপডেট সময়"
+    ]);
+    logSheet.getRange(1, 1, 1, 9)
+      .setFontWeight("bold")
+      .setBackground("#1e293b")
+      .setFontColor("#f8fafc");
+    logSheet.setFrozenRows(1);
+  } else {
+    // যদি আগে ৮ কলামের পুরনো শিট থাকে, তবে কলাম ৮ ও ৯ কে অপারেটর ও আপডেট সময় নিশ্চিত করা
+    try {
+      var headerVal = logSheet.getRange(1, 8).getValue();
+      if (headerVal !== "অপারেটর") {
+        logSheet.getRange(1, 8).setValue("অপারেটর");
+        logSheet.getRange(1, 9).setValue("আপডেট সময়");
+        logSheet.getRange(1, 1, 1, 9)
+          .setFontWeight("bold")
+          .setBackground("#1e293b")
+          .setFontColor("#f8fafc");
+        logSheet.setFrozenRows(1);
+      }
+    } catch(e) {}
+  }
+
+  // Sheet 3: ইউজার রোল ও সিস্টেম ব্যবহারের নীতিমালা
+  var rulesSheet = ss.getSheetByName("রোল_ও_নিয়মাবলী");
+  if (!rulesSheet) {
+    rulesSheet = ss.insertSheet("রোল_ও_নিয়মাবলী", 2);
+    rulesSheet.appendRow(["🏢 DSP ePOS - ইউজার রোল, নিরাপত্তা ও ব্যবহারের নির্দেশিকা"]);
+    rulesSheet.appendRow(["বিষয়", "ম্যানেজার (Manager)", "অ্যাডমিন / মালিক (Admin)", "নিরাপত্তা ও নিয়মাবলী"]);
+
+    var rulesData = [
+      ["মূল দায়িত্ব", "ক্যাশ কাউন্টারে সেলস এন্ট্রি ও রসিদ প্রিন্ট", "সার্বিক নিয়ন্ত্রণ, মাল ক্রয়, হিসাব ও স্টক নিরীক্ষা", "দোকানের হিসাব স্বচ্ছ ও নিরাপদ রাখা"],
+      ["বিক্রি এন্ট্রি (Sale)", "অনুমোদিত (কিবোর্ডের Enter দিয়ে দ্রুত বিক্রি)", "অনুমোদিত", "প্রতিটি বিক্রির পাশে অপারেটরের নাম রেকর্ড থাকবে"],
+      ["বিক্রি ডিলিট (Delete)", "নিষিদ্ধ (মুছতে পারবে না)", "অনুমোদিত (প্রয়োজনে ডিলিট করতে পারবে)", "কর্মচারী যাতে ক্যাশ নিয়ে বিক্রি ভয়েড না করতে পারে"],
+      ["মাল ক্রয় এন্ট্রি (Purchase)", "লকড (কোনো এক্সেস নেই)", "অনুমোদিত (পাইকারি মাল কেনার হিসাব যোগ)", "মালিক দূর থেকেও মোবাইল দিয়ে ক্রয় এন্ট্রি দিতে পারবেন"],
+      ["মাসের হিসাব ও স্টক শিট", "লকড (দেখতে পারবে না)", "পূর্ণ প্রবেশাধিকার (দৈনিক ও মাসিক খতিয়ান)", "মালিক ব্যতীত ব্যবসায়িক মোট লাভ/স্টক তথ্য গোপন থাকবে"],
+      ["গুগল শিট সিঙ্ক সেটিংস", "লকড (পরিবর্তন করতে পারবে না)", "পূর্ণ নিয়ন্ত্রণ (শিট লিংক ও দোকানের নাম বদল)", "সিঙ্ক সেটিংস ভুলক্রমে যাতে নষ্ট না হয়"],
+      ["লগইন ও মাস্টার পিন", "কাউন্টার ওপেন করলেই ম্যানেজার মোড", "ডিফল্ট মাস্টার পিন: 7788 (পরিবর্তনযোগ্য)", "মালিক কাজ শেষে ম্যানেজার মোডে রেখে যাবেন"],
+      ["মাসের শেষে ডাটা ক্লিয়ার", "কোনো অনুমতি নেই", "শুধু কাউন্টার ফ্রেশ করা যাবে", "লোকাল ডাটা ক্লিয়ার করলেও গুগল শিটের রেকর্ড আজীবন সুরক্ষিত থাকে"]
+    ];
+
+    for (var rd = 0; rd < rulesData.length; rd++) {
+      rulesSheet.appendRow(rulesData[rd]);
+    }
+
+    rulesSheet.getRange(1, 1, 1, 4).merge().setFontWeight("bold").setFontSize(13).setBackground("#0f172a").setFontColor("#ffffff").setHorizontalAlignment("center");
+    rulesSheet.getRange(2, 1, 1, 4).setFontWeight("bold").setFontSize(11).setBackground("#1e293b").setFontColor("#38bdf8").setHorizontalAlignment("center");
+    rulesSheet.getRange(3, 1, rulesData.length, 4).setFontSize(10).setVerticalAlignment("middle");
+    rulesSheet.getRange(3, 1, rulesData.length, 1).setFontWeight("bold").setBackground("#f1f5f9");
+    rulesSheet.setColumnWidth(1, 180);
+    rulesSheet.setColumnWidth(2, 260);
+    rulesSheet.setColumnWidth(3, 280);
+    rulesSheet.setColumnWidth(4, 300);
+    rulesSheet.setRowHeights(1, rulesData.length + 2, 28);
+  }
+
+  // নিশ্চিত করা যাতে শিটে পর্যাপ্ত খালি রো থাকে
+  if (logSheet.getMaxRows() < 100) {
+    logSheet.insertRowsAfter(logSheet.getMaxRows(), 500);
+  }
+  if (summarySheet.getMaxRows() < 100) {
+    summarySheet.insertRowsAfter(summarySheet.getMaxRows(), 500);
+  }
+
+  return { summarySheet: summarySheet, logSheet: logSheet, rulesSheet: rulesSheet };
+}
+
+/**
+ * এই ফাংশনটি Apps Script এডিটরে সরাসরি রান (Run ▶️) করা যায়
+ */
+function initialSetup() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureSheets(ss);
+  SpreadsheetApp.flush();
+}
+
+/**
+ * গুগল স্প্রেডশিট ওপেন বা রিফ্রেশ করলেই স্বয়ংক্রিয়ভাবে চলবে
+ */
+function onOpen() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    ensureSheets(ss);
+  } catch(e) {}
+}
+
 function doGet(e) {
   return ContentService.createTextOutput(
     JSON.stringify({
@@ -68,75 +179,9 @@ function doPost(e) {
 
     var request = JSON.parse(e.postData.contents);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-
-    // Sheet 1: দৈনিক ক্রয়, বিক্রি ও অবশিষ্ট স্টক
-    var summarySheet = ss.getSheetByName("দৈনিক_ক্রয়_বিক্রয়_স্টক");
-    if (!summarySheet) {
-      summarySheet = ss.insertSheet("দৈনিক_ক্রয়_বিক্রয়_স্টক", 0);
-      summarySheet.appendRow([
-        "তারিখ", "মাল ক্রয় (৳)", "মাল বিক্রি (৳)", "অবশিষ্ট স্টক (৳)", "কাস্টমার সংখ্যা", "সর্বশেষ আপডেট"
-      ]);
-      summarySheet.getRange(1, 1, 1, 6)
-        .setFontWeight("bold")
-        .setBackground("#0f172a")
-        .setFontColor("#ffffff");
-      summarySheet.setFrozenRows(1);
-    }
-
-    // Sheet 2: লেনদেন বিস্তারিত লগ (অপারেটর কলাম সহ)
-    var logSheet = ss.getSheetByName("লেনদেন_বিস্তারিত");
-    if (!logSheet) {
-      logSheet = ss.insertSheet("লেনদেন_বিস্তারিত", 1);
-      logSheet.appendRow([
-        "আইডি", "তারিখ", "সময়", "ধরন", "টাকার পরিমাণ", "কাস্টমার নং", "বিবরণ / নোট", "অপারেটর", "আপডেট সময়"
-      ]);
-      logSheet.getRange(1, 1, 1, 9)
-        .setFontWeight("bold")
-        .setBackground("#1e293b")
-        .setFontColor("#f8fafc");
-      logSheet.setFrozenRows(1);
-    }
-
-    // Sheet 3: ইউজার রোল ও সিস্টেম ব্যবহারের নীতিমালা
-    var rulesSheet = ss.getSheetByName("রোল_ও_নিয়মাবলী");
-    if (!rulesSheet) {
-      rulesSheet = ss.insertSheet("রোল_ও_নিয়মাবলী", 2);
-      rulesSheet.appendRow(["🏢 DSP ePOS - ইউজার রোল, নিরাপত্তা ও ব্যবহারের নির্দেশিকা"]);
-      rulesSheet.appendRow(["বিষয়", "ম্যানেজার (Manager)", "অ্যাডমিন / মালিক (Admin)", "নিরাপত্তা ও নিয়মাবলী"]);
-
-      var rulesData = [
-        ["মূল দায়িত্ব", "ক্যাশ কাউন্টারে সেলস এন্ট্রি ও রসিদ প্রিন্ট", "সার্বিক নিয়ন্ত্রণ, মাল ক্রয়, হিসাব ও স্টক নিরীক্ষা", "দোকানের হিসাব স্বচ্ছ ও নিরাপদ রাখা"],
-        ["বিক্রি এন্ট্রি (Sale)", "অনুমোদিত (কিবোর্ডের Enter দিয়ে দ্রুত বিক্রি)", "অনুমোদিত", "প্রতিটি বিক্রির পাশে অপারেটরের নাম রেকর্ড থাকবে"],
-        ["বিক্রি ডিলিট (Delete)", "নিষিদ্ধ (মুছতে পারবে না)", "অনুমোদিত (প্রয়োজনে ডিলিট করতে পারবে)", "কর্মচারী যাতে ক্যাশ নিয়ে বিক্রি ভয়েড না করতে পারে"],
-        ["মাল ক্রয় এন্ট্রি (Purchase)", "লকড (কোনো এক্সেস নেই)", "অনুমোদিত (পাইকারি মাল কেনার হিসাব যোগ)", "মালিক দূর থেকেও মোবাইল দিয়ে ক্রয় এন্ট্রি দিতে পারবেন"],
-        ["মাসের হিসাব ও স্টক শিট", "লকড (দেখতে পারবে না)", "পূর্ণ প্রবেশাধিকার (দৈনিক ও মাসিক খতিয়ান)", "মালিক ব্যতীত ব্যবসায়িক মোট লাভ/স্টক তথ্য গোপন থাকবে"],
-        ["গুগল শিট সিঙ্ক সেটিংস", "লকড (পরিবর্তন করতে পারবে না)", "পূর্ণ নিয়ন্ত্রণ (শিট লিংক ও দোকানের নাম বদল)", "সিঙ্ক সেটিংস ভুলক্রমে যাতে নষ্ট না হয়"],
-        ["লগইন ও মাস্টার পিন", "কাউন্টার ওপেন করলেই ম্যানেজার মোড", "ডিফল্ট মাস্টার পিন: 7788 (পরিবর্তনযোগ্য)", "মালিক কাজ শেষে ম্যানেজার মোডে রেখে যাবেন"],
-        ["মাসের শেষে ডাটা ক্লিয়ার", "কোনো অনুমতি নেই", "শুধু কাউন্টার ফ্রেশ করা যাবে", "লোকাল ডাটা ক্লিয়ার করলেও গুগল শিটের রেকর্ড আজীবন সুরক্ষিত থাকে"]
-      ];
-
-      for (var rd = 0; rd < rulesData.length; rd++) {
-        rulesSheet.appendRow(rulesData[rd]);
-      }
-
-      rulesSheet.getRange(1, 1, 1, 4).merge().setFontWeight("bold").setFontSize(13).setBackground("#0f172a").setFontColor("#ffffff").setHorizontalAlignment("center");
-      rulesSheet.getRange(2, 1, 1, 4).setFontWeight("bold").setFontSize(11).setBackground("#1e293b").setFontColor("#38bdf8").setHorizontalAlignment("center");
-      rulesSheet.getRange(3, 1, rulesData.length, 4).setFontSize(10).setVerticalAlignment("middle");
-      rulesSheet.getRange(3, 1, rulesData.length, 1).setFontWeight("bold").setBackground("#f1f5f9");
-      rulesSheet.setColumnWidth(1, 180);
-      rulesSheet.setColumnWidth(2, 260);
-      rulesSheet.setColumnWidth(3, 280);
-      rulesSheet.setColumnWidth(4, 300);
-      rulesSheet.setRowHeights(1, rulesData.length + 2, 28);
-    }
-
-    // নিশ্চিত করা যাতে শিটে পর্যাপ্ত খালি রো থাকে
-    if (logSheet.getMaxRows() < 100) {
-      logSheet.insertRowsAfter(logSheet.getMaxRows(), 500);
-    }
-    if (summarySheet.getMaxRows() < 100) {
-      summarySheet.insertRowsAfter(summarySheet.getMaxRows(), 500);
-    }
+    var sheets = ensureSheets(ss);
+    var summarySheet = sheets.summarySheet;
+    var logSheet = sheets.logSheet;
 
     var now = new Date().toISOString();
 
