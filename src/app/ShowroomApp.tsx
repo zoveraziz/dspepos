@@ -44,7 +44,6 @@ export default function ShowroomApp() {
   const liveTodayPurchaseRef = useRef<HTMLDivElement>(null);
   const liveCustomerCountRef = useRef<HTMLDivElement>(null);
   const tableTotalSaleRef = useRef<HTMLSpanElement>(null);
-  const footerTotalSaleRef = useRef<HTMLSpanElement>(null);
 
   // Monthly Overview Badge Display Refs
   const monthlyTotalPurchaseRef = useRef<HTMLDivElement>(null);
@@ -171,7 +170,6 @@ export default function ShowroomApp() {
 
       if (liveTodaySaleRef.current) liveTodaySaleRef.current.textContent = `৳${todaySalesTotal.toLocaleString("bn-BD")}`;
       if (tableTotalSaleRef.current) tableTotalSaleRef.current.textContent = `৳${todaySalesTotal.toLocaleString("bn-BD")}`;
-      if (footerTotalSaleRef.current) footerTotalSaleRef.current.textContent = `৳${todaySalesTotal.toLocaleString("bn-BD")}`;
       if (liveTodayPurchaseRef.current) liveTodayPurchaseRef.current.textContent = `৳${todayPurchaseTotal.toLocaleString("bn-BD")}`;
       if (liveCustomerCountRef.current) liveCustomerCountRef.current.textContent = `${sales.length} জন`;
 
@@ -758,8 +756,8 @@ export default function ShowroomApp() {
                   <p className="text-xs text-slate-400">প্রতিটি কাস্টমারের বিক্রির টাকা ক্রমানুসারে নিচে যোগ হচ্ছে</p>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs text-slate-400 block">আজকের সর্বমোট:</span>
-                  <span ref={tableTotalSaleRef} className="text-xl font-bold text-emerald-400">
+                  <span className="text-xs text-slate-400 block font-medium">আজকের সর্বমোট বিক্রি:</span>
+                  <span ref={tableTotalSaleRef} className="text-2xl font-black text-emerald-400">
                     ৳০
                   </span>
                 </div>
@@ -780,14 +778,6 @@ export default function ShowroomApp() {
                     {/* Populated directly without React VDOM re-renders */}
                   </tbody>
                 </table>
-              </div>
-
-              {/* Table Footer with Big Grand Total */}
-              <div className="p-4 bg-slate-900/90 border-t border-slate-700 flex justify-between items-center">
-                <span className="font-bold text-slate-300 text-base">সর্বমোট আজকের বিক্রি:</span>
-                <span ref={footerTotalSaleRef} className="text-2xl font-black text-emerald-400">
-                  ৳০
-                </span>
               </div>
             </div>
           </div>
@@ -1149,7 +1139,7 @@ export default function ShowroomApp() {
                         নতুন ভার্সন আপডেট ও ক্যাশ রিফ্রেশ
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.5.0
+                        v2.5.1
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
