@@ -328,6 +328,12 @@ class DatabaseManager {
     return [];
   }
 
+  private generateShortId(type: "S" | "P", dateStr: string): string {
+    const cleanDate = dateStr.replace(/-/g, "").slice(2);
+    const randomSalt = Math.random().toString(36).substring(2, 7).toUpperCase();
+    return `DSP-${cleanDate}-${type}${randomSalt}`;
+  }
+
   // Quick Customer Sale (Just Amount!)
   async addSale(amount: number): Promise<TransactionRecord> {
     const today = this.getTodayDateString();
@@ -339,7 +345,7 @@ class DatabaseManager {
     const nowIso = new Date().toISOString();
 
     const record: TransactionRecord = {
-      id: crypto.randomUUID(),
+      id: this.generateShortId("S", today),
       date: today,
       time: timeStr,
       type: "SALE",
@@ -386,13 +392,13 @@ class DatabaseManager {
     const nowIso = new Date().toISOString();
 
     const record: TransactionRecord = {
-      id: crypto.randomUUID(),
+      id: this.generateShortId("P", today),
       date: today,
       time: timeStr,
       type: "PURCHASE",
       amount: Number(amount),
       serial_no: 0,
-      notes: notes || "মধু বন মাল ক্রয়",
+      notes: notes || "DSP মাল ক্রয়",
       created_at: nowIso,
       updated_at: nowIso,
       is_deleted: 0,
