@@ -695,7 +695,7 @@ export default function ShowroomApp() {
       </nav>
 
       {/* TAB CONTENT PANELS */}
-      <main className="flex-1 p-6">
+      <main className="app-main-content">
         {/* TAB 1: MANAGER RAPID SALES COUNTER */}
         {activeTab === "counter" && (
           <div className="max-w-4xl mx-auto space-y-6">
