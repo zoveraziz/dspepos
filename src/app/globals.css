@@ -70,13 +70,18 @@ body {
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border-color);
   padding: 0.65rem 1.25rem;
+  box-sizing: border-box;
+}
+
+.header-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
   display: flex;
-  flex-wrap: nowrap;
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
-  min-height: 56px;
-  box-sizing: border-box;
+  flex-wrap: nowrap;
 }
 
 .header-brand {
@@ -216,11 +221,13 @@ body {
 
 @media (max-width: 768px) {
   .app-header {
+    padding: 0.5rem 0.5rem;
+    min-height: 80px;
+  }
+  .header-inner {
     flex-direction: column;
     align-items: center;
-    padding: 0.5rem 0.5rem;
     gap: 0.4rem;
-    min-height: 80px;
   }
   .header-brand {
     justify-content: center;
@@ -353,10 +360,18 @@ body {
    3. NAVIGATION TABS BAR
    ========================================================================= */
 .tab-nav {
-  display: flex;
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border-color);
-  padding: 0 1rem 0.65rem 1rem;
+  padding: 0 1.25rem 0.65rem 1.25rem;
+  box-sizing: border-box;
+}
+
+.tab-nav-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
   overflow-x: auto;
   scrollbar-width: auto;
@@ -364,27 +379,27 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-.tab-nav::-webkit-scrollbar {
+.tab-nav-inner::-webkit-scrollbar {
   height: 12px;
   display: block;
 }
 
-.tab-nav::-webkit-scrollbar-track {
+.tab-nav-inner::-webkit-scrollbar-track {
   background: var(--scrollbar-track);
   border-radius: 9999px;
   margin: 0 0.5rem;
   border: 1px solid rgba(125, 125, 125, 0.12);
 }
 
-.tab-nav::-webkit-scrollbar-thumb {
+.tab-nav-inner::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
   border-radius: 9999px;
   border: 2px solid var(--scrollbar-track);
   cursor: grab;
 }
 
-.tab-nav::-webkit-scrollbar-thumb:hover,
-.tab-nav::-webkit-scrollbar-thumb:active {
+.tab-nav-inner::-webkit-scrollbar-thumb:hover,
+.tab-nav-inner::-webkit-scrollbar-thumb:active {
   background: linear-gradient(90deg, #34d399 0%, #60a5fa 100%);
 }
 

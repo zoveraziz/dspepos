@@ -590,40 +590,42 @@ export default function ShowroomApp() {
     <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
       {/* HEADER */}
       <header className="app-header">
-        <div className="header-brand">
-          <span className="brand-badge">DSP</span>
-          <h1 className="text-xl font-bold tracking-tight text-white">ডিজিটাল সার্ভিস পয়েন্ট</h1>
-          <span className="text-xs text-amber-300 font-semibold hidden sm:inline">DSP ePOS</span>
-        </div>
-
-        <div className="header-actions">
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="btn-theme-toggle cursor-pointer"
-            title="মোড পরিবর্তন করুন (লাইট / ডার্ক)"
-          >
-            {theme === "dark" ? (
-              <span>☀️ লাইট<span className="hidden sm:inline"> মোড</span></span>
-            ) : (
-              <span>🌙 ডার্ক<span className="hidden sm:inline"> মোড</span></span>
-            )}
-          </button>
-
-          <div ref={syncPillRef} className="sync-status-pill" data-status="idle" title="গুগল শিট সিঙ্ক স্ট্যাটাস">
-            <span className="inline-block w-2 h-2 rounded-full bg-current"></span>
-            <span ref={syncMsgRef}>অফলাইন মোড</span>
+        <div className="header-inner">
+          <div className="header-brand">
+            <span className="brand-badge">DSP</span>
+            <h1 className="text-xl font-bold tracking-tight text-white">ডিজিটাল সার্ভিস পয়েন্ট</h1>
+            <span className="text-xs text-amber-300 font-semibold hidden sm:inline">DSP ePOS</span>
           </div>
 
-          <button
-            ref={printerBtnRef}
-            type="button"
-            onClick={handleConnectPrinter}
-            className="btn-header-printer cursor-pointer"
-            title="ক্যাশ কাউন্টারের থার্মাল প্রিন্টার যুক্ত করুন"
-          >
-            <span>🔌 <span className="hidden sm:inline">থার্মাল </span>প্রিন্টার</span>
-          </button>
+          <div className="header-actions">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="btn-theme-toggle cursor-pointer"
+              title="মোড পরিবর্তন করুন (লাইট / ডার্ক)"
+            >
+              {theme === "dark" ? (
+                <span>☀️ লাইট<span className="hidden sm:inline"> মোড</span></span>
+              ) : (
+                <span>🌙 ডার্ক<span className="hidden sm:inline"> মোড</span></span>
+              )}
+            </button>
+
+            <div ref={syncPillRef} className="sync-status-pill" data-status="idle" title="গুগল শিট সিঙ্ক স্ট্যাটাস">
+              <span className="inline-block w-2 h-2 rounded-full bg-current"></span>
+              <span ref={syncMsgRef}>অফলাইন মোড</span>
+            </div>
+
+            <button
+              ref={printerBtnRef}
+              type="button"
+              onClick={handleConnectPrinter}
+              className="btn-header-printer cursor-pointer"
+              title="ক্যাশ কাউন্টারের থার্মাল প্রিন্টার যুক্ত করুন"
+            >
+              <span>🔌 <span className="hidden sm:inline">থার্মাল </span>প্রিন্টার</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -662,41 +664,43 @@ export default function ShowroomApp() {
 
       {/* NAVIGATION TABS */}
       <nav className="tab-nav">
-        <button
-          type="button"
-          onClick={() => setActiveTab("counter")}
-          className={`tab-btn ${activeTab === "counter" ? "tab-btn-active" : ""}`}
-        >
-          ⚡ ম্যানেজারের সেলস কাউন্টার (আজকের বিক্রি)
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("monthly")}
-          className={`tab-btn ${activeTab === "monthly" ? "tab-btn-active" : ""}`}
-        >
-          📊 মাসের হিসাব ও স্টক শিট (গুগল শিট ফরম্যাট)
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("purchase")}
-          className={`tab-btn ${activeTab === "purchase" ? "tab-btn-active" : ""}`}
-        >
-          📦 মাল ক্রয় এন্ট্রি (মালিকের ডেস্ক)
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("sync")}
-          className={`tab-btn ${activeTab === "sync" ? "tab-btn-active" : ""}`}
-        >
-          ⚙️ গুগল শিট সিঙ্ক
-        </button>
+        <div className="tab-nav-inner">
+          <button
+            type="button"
+            onClick={() => setActiveTab("counter")}
+            className={`tab-btn ${activeTab === "counter" ? "tab-btn-active" : ""}`}
+          >
+            ⚡ ম্যানেজারের সেলস কাউন্টার (আজকের বিক্রি)
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("monthly")}
+            className={`tab-btn ${activeTab === "monthly" ? "tab-btn-active" : ""}`}
+          >
+            📊 মাসের হিসাব ও স্টক শিট (গুগল শিট ফরম্যাট)
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("purchase")}
+            className={`tab-btn ${activeTab === "purchase" ? "tab-btn-active" : ""}`}
+          >
+            📦 মাল ক্রয় এন্ট্রি (মালিকের ডেস্ক)
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("sync")}
+            className={`tab-btn ${activeTab === "sync" ? "tab-btn-active" : ""}`}
+          >
+            ⚙️ গুগল শিট সিঙ্ক
+          </button>
+        </div>
       </nav>
 
       {/* TAB CONTENT PANELS */}
       <main className="app-main-content">
         {/* TAB 1: MANAGER RAPID SALES COUNTER */}
         {activeTab === "counter" && (
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="space-y-6 w-full">
             {/* Modern Sales Entry Hero Card */}
             <div className="pos-hero-card">
               <div className="pos-hero-header">
@@ -785,7 +789,7 @@ export default function ShowroomApp() {
 
         {/* TAB 2: MONTHLY COMBINED STOCK & SALES SHEET */}
         {activeTab === "monthly" && (
-          <div className="max-w-6xl mx-auto space-y-6">
+          <div className="space-y-6 w-full">
             <div className="monthly-kpi-grid">
               <div className="monthly-kpi-card monthly-kpi-card-blue">
                 <div className="monthly-kpi-title">📦 মাসের সর্বমোট মাল ক্রয়</div>
@@ -944,7 +948,7 @@ export default function ShowroomApp() {
 
         {/* TAB 3: OWNER DAILY PURCHASE DESK */}
         {activeTab === "purchase" && (
-          <div className="max-w-3xl mx-auto space-y-6">
+          <div className="space-y-6 w-full">
             <div className="table-card p-6 border-2 border-blue-500/40">
               <h2 className="text-lg font-bold text-white mb-2">📦 মাল ক্রয় এন্ট্রি (মালিকের হিসাব)</h2>
               <p className="text-xs text-slate-400 mb-4">
@@ -1139,7 +1143,7 @@ export default function ShowroomApp() {
                         নতুন ভার্সন আপডেট ও ক্যাশ রিফ্রেশ
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.5.2
+                        v2.5.3
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
