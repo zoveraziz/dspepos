@@ -63,20 +63,28 @@ body {
    1. APP HEADER
    ========================================================================= */
 .app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(8px);
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border-color);
-  padding: 0.85rem 1.25rem;
+  padding: 0.65rem 1.25rem;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
+  min-height: 56px;
+  box-sizing: border-box;
 }
 
 .header-brand {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .brand-badge {
@@ -93,21 +101,144 @@ body {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
 }
 
 .sync-status-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.35rem 0.75rem;
+  padding: 0.35rem 0.7rem;
   border-radius: 9999px;
   font-size: 0.8rem;
   font-weight: 600;
   background-color: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-color);
   color: var(--text-muted);
+  white-space: nowrap !important;
+  flex-shrink: 0;
+  max-width: 170px;
+  height: 32px;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-header-printer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  transition: all 120ms ease;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+.btn-header-printer:hover {
+  background-color: var(--border-color);
+}
+
+[data-theme="light"] .btn-header-printer {
+  background-color: #ffffff;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+
+.monthly-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.monthly-kpi-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.monthly-kpi-card-blue {
+  border-left: 4px solid #3b82f6;
+}
+
+.monthly-kpi-card-emerald {
+  border-left: 4px solid #10b981;
+}
+
+.monthly-kpi-card-amber {
+  border-left: 4px solid #f59e0b;
+}
+
+.monthly-kpi-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.monthly-kpi-val {
+  font-size: 1.75rem;
+  font-weight: 900;
+  margin-top: 0.5rem;
+}
+
+[data-theme="light"] .monthly-kpi-card {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem 0.5rem;
+    gap: 0.4rem;
+    min-height: 80px;
+  }
+  .header-brand {
+    justify-content: center;
+    width: 100%;
+    gap: 0.4rem;
+  }
+  .header-brand h1 {
+    font-size: 1.05rem;
+    white-space: nowrap;
+  }
+  .brand-badge {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+  }
+  .header-actions {
+    justify-content: center;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.35rem;
+    padding-bottom: 2px;
+  }
+  .btn-theme-toggle,
+  .sync-status-pill,
+  .btn-header-printer {
+    font-size: 0.75rem;
+    padding: 0.28rem 0.55rem;
+    height: 30px;
+  }
+  .monthly-kpi-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .sync-status-pill[data-status="synced"] {
@@ -620,20 +751,30 @@ body {
     position: absolute;
     left: 0;
     top: 0;
-    width: 80mm;
+    width: 100%;
     margin: 0;
     padding: 0;
     background: #fff;
     color: #000;
+  }
+
+  #epos-print-mount .print-receipt-container {
+    width: 78mm;
+    margin: 0 auto;
+    padding: 2mm 0;
     font-family: "Courier New", Courier, monospace;
     font-size: 13px;
     line-height: 1.2;
   }
 
-  .print-receipt-container {
-    width: 78mm;
+  #epos-print-mount .print-report-container {
+    width: 100%;
+    max-width: 210mm;
     margin: 0 auto;
-    padding: 2mm 0;
+    padding: 8mm;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #0f172a;
+    font-size: 12px;
   }
 
   .print-divider {
@@ -648,8 +789,8 @@ body {
   }
 
   @page {
-    size: 80mm auto;
-    margin: 0;
+    size: auto;
+    margin: 5mm;
   }
 }
 
@@ -670,6 +811,10 @@ body {
   color: var(--text-main);
   transition: all 120ms ease;
   user-select: none;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+  height: 32px;
+  box-sizing: border-box;
 }
 
 .btn-theme-toggle:hover {
@@ -1108,4 +1253,151 @@ body {
   background-color: #ffffff;
   border-color: #cbd5e1;
   color: #0f172a;
+}
+
+/* =========================================================================
+   10. LEDGER FILTERS & EXPORT TOOLBAR
+   ========================================================================= */
+.ledger-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  background-color: rgba(0, 0, 0, 0.18);
+  border-bottom: 1px solid var(--border-color);
+}
+
+@media (min-width: 768px) {
+  .ledger-toolbar {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.ledger-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.filter-pill {
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  transition: all 120ms ease;
+  user-select: none;
+}
+
+.filter-pill:hover {
+  color: var(--text-main);
+  border-color: #64748b;
+}
+
+.filter-pill-active {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  border-color: #10b981 !important;
+  color: #34d399 !important;
+}
+
+.ledger-actions-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.btn-export-excel {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+  transition: all 120ms ease;
+}
+
+.btn-export-excel:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+}
+
+.btn-export-print {
+  background-color: var(--bg-card);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 8px;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 120ms ease;
+}
+
+.btn-export-print:hover {
+  background-color: rgba(59, 130, 246, 0.15);
+  border-color: #60a5fa;
+  transform: translateY(-1px);
+}
+
+.ledger-custom-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.ledger-date-input {
+  background-color: #050811;
+  border: 1px solid var(--border-color);
+  color: #fff;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.ledger-date-input:focus {
+  border-color: #10b981;
+}
+
+.ledger-footer-total {
+  background-color: #0a0f1d;
+  border-top: 2px solid var(--border-color);
+  font-weight: 700;
+}
+
+.ledger-footer-total td {
+  padding: 0.9rem 1rem;
+  font-size: 0.95rem;
+}
+
+[data-theme="light"] .ledger-toolbar {
+  background-color: #f8fafc;
+}
+
+[data-theme="light"] .ledger-date-input {
+  background-color: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .ledger-footer-total {
+  background-color: #f1f5f9;
 }

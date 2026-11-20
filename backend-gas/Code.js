@@ -329,14 +329,43 @@ function doPost(e) {
       var maxLogCols = Math.max(8, logSheet.getLastColumn());
       var currentLogLastRow = logSheet.getLastRow();
       if (currentLogLastRow > 1) {
-        logSheet.getRange(2, 1, currentLogLastRow - 1, maxLogCols).clearContent();
+        logSheet.getRange(2, 1, currentLogLastRow - 1, maxLogCols).clearContent().setBackground(null).setFontWeight("normal");
       }
 
       if (keptRows.length > 0) {
-        if (logSheet.getMaxRows() < keptRows.length + 1) {
-          logSheet.insertRowsAfter(logSheet.getMaxRows(), keptRows.length + 10 - logSheet.getMaxRows());
+        if (logSheet.getMaxRows() < keptRows.length + 5) {
+          logSheet.insertRowsAfter(logSheet.getMaxRows(), keptRows.length + 50 - logSheet.getMaxRows());
         }
-        logSheet.getRange(2, 1, keptRows.length, 8).setValues(keptRows);
+        var logRange = logSheet.getRange(2, 1, keptRows.length, 8);
+        logRange.setValues(keptRows);
+
+        // ১. প্রফেশনাল অ্যালাইনমেন্ট ও নাম্বার ফরম্যাটিং
+        logSheet.getRange(2, 1, keptRows.length, 1).setFontFamily("Courier New").setHorizontalAlignment("center");
+        logSheet.getRange(2, 2, keptRows.length, 2).setHorizontalAlignment("center");
+        logSheet.getRange(2, 4, keptRows.length, 1).setHorizontalAlignment("center");
+        logSheet.getRange(2, 5, keptRows.length, 1).setNumberFormat("৳#,##0.00").setHorizontalAlignment("right");
+        logSheet.getRange(2, 6, keptRows.length, 1).setHorizontalAlignment("center");
+        logSheet.getRange(2, 7, keptRows.length, 1).setHorizontalAlignment("left");
+        logSheet.getRange(2, 8, keptRows.length, 1).setHorizontalAlignment("center");
+
+        // ২. জেব্রা স্ট্রাইপ ও ক্রয়ের জন্য আলাদা নরম নীল ব্যাকগ্রাউন্ড
+        var logBgs = [];
+        for (var y = 0; y < keptRows.length; y++) {
+          var isPurchLog = (keptRows[y][3] === "মাল ক্রয়");
+          var c = isPurchLog ? (y % 2 === 0 ? "#eff6ff" : "#dbeafe") : (y % 2 === 0 ? "#ffffff" : "#f8fafc");
+          logBgs.push([c, c, c, c, c, c, c, c]);
+        }
+        logRange.setBackgrounds(logBgs);
+
+        // ৩. কলামগুলোর প্রস্থ (Width) নিখুঁত করা
+        logSheet.setColumnWidth(1, 140);
+        logSheet.setColumnWidth(2, 110);
+        logSheet.setColumnWidth(3, 100);
+        logSheet.setColumnWidth(4, 90);
+        logSheet.setColumnWidth(5, 130);
+        logSheet.setColumnWidth(6, 100);
+        logSheet.setColumnWidth(7, 180);
+        logSheet.setColumnWidth(8, 160);
       }
 
       // চ. "দৈনিক_ক্রয়_বিক্রয়_স্টক" শিট স্বয়ংক্রিয়ভাবে পুনরায় সঠিকভাবে হিসাব করা
@@ -362,11 +391,18 @@ function doPost(e) {
 
       var sortedDates = Object.keys(dateMap).sort();
       var runningStock = 0;
+      var totalPurchAll = 0;
+      var totalSaleAll = 0;
+      var totalCustAll = 0;
       var summaryRows = [];
 
       sortedDates.forEach(function(d) {
         var item = dateMap[d];
         runningStock += (item.purchase - item.sale);
+        totalPurchAll += item.purchase;
+        totalSaleAll += item.sale;
+        totalCustAll += item.count;
+
         summaryRows.push([
           d,
           item.purchase,
@@ -377,17 +413,57 @@ function doPost(e) {
         ]);
       });
 
+      // গ্র্যান্ড টোটাল সামারি রো যুক্ত করা
+      var hasSummaryData = summaryRows.length > 0;
+      if (hasSummaryData) {
+        summaryRows.push([
+          "মোট সর্বমোট হিসাব",
+          totalPurchAll,
+          totalSaleAll,
+          runningStock,
+          totalCustAll,
+          "সার্বিক ব্যালেন্স"
+        ]);
+      }
+
       var maxSumCols = Math.max(6, summarySheet.getLastColumn());
       var currentSummaryLastRow = summarySheet.getLastRow();
       if (currentSummaryLastRow > 1) {
-        summarySheet.getRange(2, 1, currentSummaryLastRow - 1, maxSumCols).clearContent();
+        summarySheet.getRange(2, 1, currentSummaryLastRow - 1, maxSumCols).clearContent().setBackground(null).setFontWeight("normal");
       }
 
       if (summaryRows.length > 0) {
-        if (summarySheet.getMaxRows() < summaryRows.length + 1) {
-          summarySheet.insertRowsAfter(summarySheet.getMaxRows(), summaryRows.length + 10 - summarySheet.getMaxRows());
+        if (summarySheet.getMaxRows() < summaryRows.length + 5) {
+          summarySheet.insertRowsAfter(summarySheet.getMaxRows(), summaryRows.length + 50 - summarySheet.getMaxRows());
         }
-        summarySheet.getRange(2, 1, summaryRows.length, 6).setValues(summaryRows);
+        var sumRange = summarySheet.getRange(2, 1, summaryRows.length, 6);
+        sumRange.setValues(summaryRows);
+
+        // ১. প্রফেশনাল অ্যালাইনমেন্ট ও কারেন্সি ফরম্যাটিং
+        summarySheet.getRange(2, 1, summaryRows.length, 1).setHorizontalAlignment("center");
+        summarySheet.getRange(2, 2, summaryRows.length, 3).setNumberFormat("৳#,##0.00").setHorizontalAlignment("right");
+        summarySheet.getRange(2, 5, summaryRows.length, 2).setHorizontalAlignment("center");
+
+        // ২. জেব্রা স্ট্রাইপ ব্যাকগ্রাউন্ড
+        var sumBgs = [];
+        for (var z = 0; z < summaryRows.length - 1; z++) {
+          var bg = (z % 2 === 0) ? "#ffffff" : "#f8fafc";
+          sumBgs.push([bg, bg, bg, bg, bg, bg]);
+        }
+        // গ্র্যান্ড টোটাল সারির জন্য বিশেষ ব্যাকগ্রাউন্ড
+        sumBgs.push(["#e2e8f0", "#e2e8f0", "#e2e8f0", "#e2e8f0", "#e2e8f0", "#e2e8f0"]);
+        sumRange.setBackgrounds(sumBgs);
+
+        // গ্র্যান্ড টোটাল বোল্ড করা
+        summarySheet.getRange(summaryRows.length + 1, 1, 1, 6).setFontWeight("bold");
+
+        // ৩. কলামগুলোর সঠিক উইডথ সেট করা
+        summarySheet.setColumnWidth(1, 120);
+        summarySheet.setColumnWidth(2, 140);
+        summarySheet.setColumnWidth(3, 140);
+        summarySheet.setColumnWidth(4, 160);
+        summarySheet.setColumnWidth(5, 120);
+        summarySheet.setColumnWidth(6, 140);
       }
 
       // ছ. রেসপন্স তৈরি করা যাতে সব ডিভাইস (মোবাইল + পিসি) রিয়েলটাইমে আপডেট দেখতে পায়

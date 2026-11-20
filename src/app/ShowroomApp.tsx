@@ -13,6 +13,21 @@ export default function ShowroomApp() {
   const [activeTab, setActiveTab] = useState<"counter" | "monthly" | "purchase" | "sync">("counter");
   const [gasCopied, setGasCopied] = useState(false);
 
+  // Tab 2: Monthly Ledger Filters & Search State
+  const [dateFilterPreset, setDateFilterPreset] = useState<"all" | "today" | "7days" | "month" | "custom">("all");
+  const [customFromDate, setCustomFromDate] = useState<string>("");
+  const [customToDate, setCustomToDate] = useState<string>("");
+  const [ledgerSearch, setLedgerSearch] = useState<string>("");
+
+  const rawMonthlySummariesRef = useRef<DailySummaryRow[]>([]);
+  const filteredMonthlySummariesRef = useRef<DailySummaryRow[]>([]);
+
+  // Monthly Table Footer Grand Totals
+  const monthlyGrandTotalPurchaseRef = useRef<HTMLTableCellElement>(null);
+  const monthlyGrandTotalSaleRef = useRef<HTMLTableCellElement>(null);
+  const monthlyGrandTotalStockRef = useRef<HTMLTableCellElement>(null);
+  const monthlyGrandTotalCustRef = useRef<HTMLTableCellElement>(null);
+
   // DOM References (Zero React Re-render Engine for Sales & Calculations)
   const syncPillRef = useRef<HTMLDivElement>(null);
   const syncMsgRef = useRef<HTMLSpanElement>(null);
@@ -95,14 +110,25 @@ export default function ShowroomApp() {
       gasUrlInputRef.current.value = syncEngine.getEndpointUrl();
     }
 
-    // Direct DOM Sync Status Listener
+    // Direct DOM Sync Status Listener (Clean, non-jumping badges with hover tooltip)
     const handleSyncEvent = (e: any) => {
       const { state, message } = e.detail;
       if (syncPillRef.current) {
         syncPillRef.current.setAttribute("data-status", state);
+        syncPillRef.current.title = message || state;
       }
       if (syncMsgRef.current) {
-        syncMsgRef.current.textContent = message || state;
+        if (state === "synced") {
+          syncMsgRef.current.textContent = "✓ সিঙ্কড";
+        } else if (state === "syncing") {
+          syncMsgRef.current.textContent = "⟳ সিঙ্ক হচ্ছে...";
+        } else if (state === "offline") {
+          syncMsgRef.current.textContent = "⚠️ অফলাইন";
+        } else if (state === "error") {
+          syncMsgRef.current.textContent = "❌ সিঙ্ক এরর";
+        } else {
+          syncMsgRef.current.textContent = message || "অফলাইন মোড";
+        }
       }
       if (state === "synced") {
         refreshAllData();
@@ -197,14 +223,63 @@ export default function ShowroomApp() {
     todaySalesTableBodyRef.current.replaceChildren(fragment);
   };
 
-  // Render Monthly Combined Table (ক্রয় | বিক্রি | অবশিষ্ট স্টক)
-  const renderMonthlySummaries = (summaries: DailySummaryRow[]) => {
+  // Effect to re-filter and re-render monthly summaries when filter states change
+  useEffect(() => {
+    applyMonthlyFilterAndRender();
+  }, [dateFilterPreset, customFromDate, customToDate, ledgerSearch]);
+
+  const applyMonthlyFilterAndRender = () => {
     if (!monthlyTableBodyRef.current) return;
+    const allRows = rawMonthlySummariesRef.current || [];
 
-    let totalMonthPurchase = 0;
-    let totalMonthSale = 0;
+    const now = new Date();
+    const toDateStr = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+    const todayStr = toDateStr(now);
 
-    if (summaries.length === 0) {
+    let filtered = allRows.slice();
+
+    if (dateFilterPreset === "today") {
+      filtered = filtered.filter((r) => r.date === todayStr);
+    } else if (dateFilterPreset === "7days") {
+      const sevenDaysAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+      const startStr = toDateStr(sevenDaysAgo);
+      filtered = filtered.filter((r) => r.date >= startStr && r.date <= todayStr);
+    } else if (dateFilterPreset === "month") {
+      const currentMonthPrefix = todayStr.substring(0, 7);
+      filtered = filtered.filter((r) => r.date.startsWith(currentMonthPrefix));
+    } else if (dateFilterPreset === "custom") {
+      if (customFromDate) {
+        filtered = filtered.filter((r) => r.date >= customFromDate);
+      }
+      if (customToDate) {
+        filtered = filtered.filter((r) => r.date <= customToDate);
+      }
+    }
+
+    if (ledgerSearch.trim()) {
+      const q = ledgerSearch.trim().toLowerCase();
+      filtered = filtered.filter(
+        (r) =>
+          r.date.toLowerCase().includes(q) ||
+          r.total_purchase.toString().includes(q) ||
+          r.total_sale.toString().includes(q) ||
+          r.remaining_stock.toString().includes(q) ||
+          r.sales_count.toString().includes(q)
+      );
+    }
+
+    filteredMonthlySummariesRef.current = filtered;
+
+    let totalFilteredPurchase = 0;
+    let totalFilteredSale = 0;
+    let totalFilteredCust = 0;
+
+    if (filtered.length === 0) {
       monthlyTableBodyRef.current.innerHTML = `
         <tr>
           <td colspan="5" class="text-center py-8 text-slate-400">
@@ -212,36 +287,110 @@ export default function ShowroomApp() {
           </td>
         </tr>
       `;
+    } else {
+      const fragment = document.createDocumentFragment();
+      filtered.forEach((row) => {
+        totalFilteredPurchase += row.total_purchase;
+        totalFilteredSale += row.total_sale;
+        totalFilteredCust += row.sales_count;
+
+        const tr = document.createElement("tr");
+        const isPositive = row.remaining_stock >= 0;
+
+        tr.innerHTML = `
+          <td class="font-semibold text-slate-200 font-mono">${row.date}</td>
+          <td class="font-bold text-blue-400">৳${row.total_purchase.toLocaleString("bn-BD")}</td>
+          <td class="font-bold text-emerald-400">৳${row.total_sale.toLocaleString("bn-BD")}</td>
+          <td class="font-bold ${isPositive ? 'text-amber-400' : 'text-red-400'}">
+            ৳${row.remaining_stock.toLocaleString("bn-BD")}
+          </td>
+          <td class="text-slate-400">${row.sales_count} জন</td>
+        `;
+        fragment.appendChild(tr);
+      });
+      monthlyTableBodyRef.current.replaceChildren(fragment);
+    }
+
+    const netBalance = totalFilteredPurchase - totalFilteredSale;
+    if (monthlyTotalPurchaseRef.current) monthlyTotalPurchaseRef.current.textContent = `৳${totalFilteredPurchase.toLocaleString("bn-BD")}`;
+    if (monthlyTotalSaleRef.current) monthlyTotalSaleRef.current.textContent = `৳${totalFilteredSale.toLocaleString("bn-BD")}`;
+    if (monthlyRemainingStockRef.current) monthlyRemainingStockRef.current.textContent = `৳${netBalance.toLocaleString("bn-BD")}`;
+
+    if (monthlyGrandTotalPurchaseRef.current) monthlyGrandTotalPurchaseRef.current.textContent = `৳${totalFilteredPurchase.toLocaleString("bn-BD")}`;
+    if (monthlyGrandTotalSaleRef.current) monthlyGrandTotalSaleRef.current.textContent = `৳${totalFilteredSale.toLocaleString("bn-BD")}`;
+    if (monthlyGrandTotalStockRef.current) monthlyGrandTotalStockRef.current.textContent = `৳${netBalance.toLocaleString("bn-BD")}`;
+    if (monthlyGrandTotalCustRef.current) monthlyGrandTotalCustRef.current.textContent = `${totalFilteredCust} জন`;
+  };
+
+  // Render Monthly Combined Table (ক্রয় | বিক্রি | অবশিষ্ট স্টক)
+  const renderMonthlySummaries = (summaries: DailySummaryRow[]) => {
+    rawMonthlySummariesRef.current = summaries;
+    applyMonthlyFilterAndRender();
+  };
+
+  // Export Filtered Monthly Summaries as CSV for Excel (UTF-8 BOM encoded)
+  const handleExportCSV = () => {
+    const rows = filteredMonthlySummariesRef.current || [];
+    if (rows.length === 0) {
+      alert("ডাউনলোড করার মতো কোনো হিসাব নেই।");
       return;
     }
 
-    const fragment = document.createDocumentFragment();
+    let totalPurch = 0;
+    let totalSale = 0;
+    let totalCust = 0;
 
-    summaries.forEach((row) => {
-      totalMonthPurchase += row.total_purchase;
-      totalMonthSale += row.total_sale;
+    let csv = "তারিখ,মাল ক্রয় (টাকা),মাল বিক্রি (টাকা),অবশিষ্ট স্টক / ব্যালেন্স (টাকা),মোট কাস্টমার সংখ্যা\r\n";
 
-      const tr = document.createElement("tr");
-      const isPositive = row.remaining_stock >= 0;
-
-      tr.innerHTML = `
-        <td class="font-semibold text-slate-200 font-mono">${row.date}</td>
-        <td class="font-bold text-blue-400">৳${row.total_purchase.toLocaleString("bn-BD")}</td>
-        <td class="font-bold text-emerald-400">৳${row.total_sale.toLocaleString("bn-BD")}</td>
-        <td class="font-bold ${isPositive ? 'text-amber-400' : 'text-red-400'}">
-          ৳${row.remaining_stock.toLocaleString("bn-BD")}
-        </td>
-        <td class="text-slate-400">${row.sales_count} জন</td>
-      `;
-      fragment.appendChild(tr);
+    rows.forEach((r) => {
+      totalPurch += r.total_purchase;
+      totalSale += r.total_sale;
+      totalCust += r.sales_count;
+      csv += `"${r.date}",${r.total_purchase.toFixed(2)},${r.total_sale.toFixed(2)},${r.remaining_stock.toFixed(2)},${r.sales_count}\r\n`;
     });
 
-    monthlyTableBodyRef.current.replaceChildren(fragment);
+    const netBal = totalPurch - totalSale;
+    csv += `"মোট সর্বমোট হিসাব",${totalPurch.toFixed(2)},${totalSale.toFixed(2)},${netBal.toFixed(2)},${totalCust}\r\n`;
 
-    const netBalance = totalMonthPurchase - totalMonthSale;
-    if (monthlyTotalPurchaseRef.current) monthlyTotalPurchaseRef.current.textContent = `৳${totalMonthPurchase.toLocaleString("bn-BD")}`;
-    if (monthlyTotalSaleRef.current) monthlyTotalSaleRef.current.textContent = `৳${totalMonthSale.toLocaleString("bn-BD")}`;
-    if (monthlyRemainingStockRef.current) monthlyRemainingStockRef.current.textContent = `৳${netBalance.toLocaleString("bn-BD")}`;
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const today = new Date().toISOString().split("T")[0];
+    a.href = url;
+    a.download = `DSP_দৈনিক_স্টক_খতিয়ান_${today}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Print Filtered Ledger Report (A4 Printable)
+  const handlePrintReport = () => {
+    const rows = filteredMonthlySummariesRef.current || [];
+    let totalPurch = 0;
+    let totalSale = 0;
+    let totalCust = 0;
+
+    rows.forEach((r) => {
+      totalPurch += r.total_purchase;
+      totalSale += r.total_sale;
+      totalCust += r.sales_count;
+    });
+
+    let periodTitle = "সব দিন";
+    if (dateFilterPreset === "today") periodTitle = "আজকের হিসাব";
+    else if (dateFilterPreset === "7days") periodTitle = "গত ৭ দিনের হিসাব";
+    else if (dateFilterPreset === "month") periodTitle = "চলতি মাসের হিসাব";
+    else if (dateFilterPreset === "custom") {
+      periodTitle = `${customFromDate || "শুরু"} থেকে ${customToDate || "আজ"}`;
+    }
+
+    printBridge.printLedgerReport(rows, periodTitle, {
+      purchase: totalPurch,
+      sale: totalSale,
+      stock: totalPurch - totalSale,
+      customers: totalCust,
+    });
   };
 
   // Render Today's Purchases
@@ -456,10 +605,14 @@ export default function ShowroomApp() {
             className="btn-theme-toggle cursor-pointer"
             title="মোড পরিবর্তন করুন (লাইট / ডার্ক)"
           >
-            {theme === "dark" ? "☀️ লাইট মোড" : "🌙 ডার্ক মোড"}
+            {theme === "dark" ? (
+              <span>☀️ লাইট<span className="hidden sm:inline"> মোড</span></span>
+            ) : (
+              <span>🌙 ডার্ক<span className="hidden sm:inline"> মোড</span></span>
+            )}
           </button>
 
-          <div ref={syncPillRef} className="sync-status-pill" data-status="idle">
+          <div ref={syncPillRef} className="sync-status-pill" data-status="idle" title="গুগল শিট সিঙ্ক স্ট্যাটাস">
             <span className="inline-block w-2 h-2 rounded-full bg-current"></span>
             <span ref={syncMsgRef}>অফলাইন মোড</span>
           </div>
@@ -468,9 +621,10 @@ export default function ShowroomApp() {
             ref={printerBtnRef}
             type="button"
             onClick={handleConnectPrinter}
-            className="btn-secondary text-xs cursor-pointer"
+            className="btn-header-printer cursor-pointer"
+            title="ক্যাশ কাউন্টারের থার্মাল প্রিন্টার যুক্ত করুন"
           >
-            🔌 থার্মাল প্রিন্টার যুক্ত করুন
+            <span>🔌 <span className="hidden sm:inline">থার্মাল </span>প্রিন্টার</span>
           </button>
         </div>
       </header>
@@ -642,24 +796,24 @@ export default function ShowroomApp() {
         {/* TAB 2: MONTHLY COMBINED STOCK & SALES SHEET */}
         {activeTab === "monthly" && (
           <div className="max-w-6xl mx-auto space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="table-card p-6 border-l-4 border-blue-500">
-                <div className="text-sm text-slate-400 font-semibold">📦 মাসের সর্বমোট মাল ক্রয়</div>
-                <div ref={monthlyTotalPurchaseRef} className="text-3xl font-black text-blue-400 mt-2">
+            <div className="monthly-kpi-grid">
+              <div className="monthly-kpi-card monthly-kpi-card-blue">
+                <div className="monthly-kpi-title">📦 মাসের সর্বমোট মাল ক্রয়</div>
+                <div ref={monthlyTotalPurchaseRef} className="monthly-kpi-val text-blue-400">
                   ৳০
                 </div>
               </div>
 
-              <div className="table-card p-6 border-l-4 border-emerald-500">
-                <div className="text-sm text-slate-400 font-semibold">💰 মাসের সর্বমোট মাল বিক্রি</div>
-                <div ref={monthlyTotalSaleRef} className="text-3xl font-black text-emerald-400 mt-2">
+              <div className="monthly-kpi-card monthly-kpi-card-emerald">
+                <div className="monthly-kpi-title">💰 মাসের সর্বমোট মাল বিক্রি</div>
+                <div ref={monthlyTotalSaleRef} className="monthly-kpi-val text-emerald-400">
                   ৳০
                 </div>
               </div>
 
-              <div className="table-card p-6 border-l-4 border-amber-500">
-                <div className="text-sm text-slate-400 font-semibold">📊 অবশিষ্ট স্টক / ব্যালেন্স</div>
-                <div ref={monthlyRemainingStockRef} className="text-3xl font-black text-amber-400 mt-2">
+              <div className="monthly-kpi-card monthly-kpi-card-amber">
+                <div className="monthly-kpi-title">📊 অবশিষ্ট স্টক / ব্যালেন্স</div>
+                <div ref={monthlyRemainingStockRef} className="monthly-kpi-val text-amber-400">
                   ৳০
                 </div>
               </div>
@@ -680,6 +834,95 @@ export default function ShowroomApp() {
                 </button>
               </div>
 
+              {/* Toolbar: Filter Pills, Date Picker, Live Search, Excel/CSV Export & A4 Print */}
+              <div className="ledger-toolbar">
+                <div className="ledger-filter-group">
+                  <span className="text-xs text-slate-400 font-bold mr-1">ফিল্টার:</span>
+                  <button
+                    type="button"
+                    onClick={() => setDateFilterPreset("all")}
+                    className={`filter-pill ${dateFilterPreset === "all" ? "filter-pill-active" : ""}`}
+                  >
+                    সব দিন
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDateFilterPreset("today")}
+                    className={`filter-pill ${dateFilterPreset === "today" ? "filter-pill-active" : ""}`}
+                  >
+                    আজকে
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDateFilterPreset("7days")}
+                    className={`filter-pill ${dateFilterPreset === "7days" ? "filter-pill-active" : ""}`}
+                  >
+                    গত ৭ দিন
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDateFilterPreset("month")}
+                    className={`filter-pill ${dateFilterPreset === "month" ? "filter-pill-active" : ""}`}
+                  >
+                    চলতি মাস
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDateFilterPreset("custom")}
+                    className={`filter-pill ${dateFilterPreset === "custom" ? "filter-pill-active" : ""}`}
+                  >
+                    কাস্টম তারিখ ▾
+                  </button>
+
+                  {dateFilterPreset === "custom" && (
+                    <div className="ledger-custom-date">
+                      <span>হতে:</span>
+                      <input
+                        type="date"
+                        value={customFromDate}
+                        onChange={(e) => setCustomFromDate(e.target.value)}
+                        className="ledger-date-input"
+                      />
+                      <span>পর্যন্ত:</span>
+                      <input
+                        type="date"
+                        value={customToDate}
+                        onChange={(e) => setCustomToDate(e.target.value)}
+                        className="ledger-date-input"
+                      />
+                    </div>
+                  )}
+
+                  <input
+                    type="text"
+                    value={ledgerSearch}
+                    onChange={(e) => setLedgerSearch(e.target.value)}
+                    placeholder="🔍 তারিখ বা টাকা খুঁজুন..."
+                    className="ledger-date-input ml-1"
+                    style={{ minWidth: "210px" }}
+                  />
+                </div>
+
+                <div className="ledger-actions-group">
+                  <button
+                    type="button"
+                    onClick={handleExportCSV}
+                    className="btn-export-excel"
+                    title="মাইক্রোসফট এক্সেলে খতিয়ান ডাউনলোড করুন (বাংলা ফন্ট সাপোর্ট সহ)"
+                  >
+                    📥 এক্সেল (CSV) ডাউনলোড
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePrintReport}
+                    className="btn-export-print"
+                    title="পুরো খতিয়ান বিবরণী A4 পেপারে প্রিন্ট বা PDF সেভ করুন"
+                  >
+                    🖨️ খতিয়ান রিপোর্ট প্রিন্ট (A4)
+                  </button>
+                </div>
+              </div>
+
               <div className="table-wrapper">
                 <table className="data-table">
                   <thead>
@@ -694,6 +937,15 @@ export default function ShowroomApp() {
                   <tbody ref={monthlyTableBodyRef}>
                     {/* Daily Combined Rows */}
                   </tbody>
+                  <tfoot>
+                    <tr className="ledger-footer-total">
+                      <td className="text-white font-bold">মোট সর্বমোট হিসাব</td>
+                      <td ref={monthlyGrandTotalPurchaseRef} className="font-bold text-blue-400">৳০</td>
+                      <td ref={monthlyGrandTotalSaleRef} className="font-bold text-emerald-400">৳০</td>
+                      <td ref={monthlyGrandTotalStockRef} className="font-bold text-amber-400">৳০</td>
+                      <td ref={monthlyGrandTotalCustRef} className="font-bold text-slate-300">০ জন</td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>
@@ -897,7 +1149,7 @@ export default function ShowroomApp() {
                         নতুন ভার্সন আপডেট ও ক্যাশ রিফ্রেশ
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.4.0
+                        v2.5.0
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
