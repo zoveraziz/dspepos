@@ -208,9 +208,9 @@ body {
 }
 
 .monthly-kpi-val {
-  font-size: 1.75rem;
-  font-weight: 900;
-  margin-top: 0.5rem;
+  font-size: 1.55rem;
+  font-weight: 800;
+  margin-top: 0.35rem;
 }
 
 [data-theme="light"] .monthly-kpi-card {
@@ -333,21 +333,22 @@ body {
 }
 
 .kpi-label {
-  font-size: 0.8rem;
-  font-weight: 500;
+  font-size: 0.84rem;
+  font-weight: 600;
   color: var(--text-muted);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.35rem;
+  letter-spacing: 0.2px;
 }
 
 .kpi-value {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 800;
   line-height: 1.2;
 }
 
 @media (min-width: 640px) {
   .kpi-value {
-    font-size: 1.65rem;
+    font-size: 1.55rem;
   }
 }
 
@@ -407,7 +408,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.9rem 1.15rem;
+  padding: 0.8rem 1.05rem;
   cursor: pointer;
   color: var(--text-muted);
   font-weight: 600;
@@ -415,7 +416,7 @@ body {
   border: none;
   border-bottom: 2px solid transparent;
   transition: all 120ms ease;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   white-space: nowrap;
 }
 
@@ -670,6 +671,54 @@ body {
   color: #ffffff;
 }
 
+.btn-table-action {
+  background-color: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  padding: 0.32rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 120ms ease;
+}
+
+.btn-table-action:hover {
+  background-color: #334155;
+  border-color: #64748b;
+}
+
+.btn-table-danger {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  padding: 0.32rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 120ms ease;
+}
+
+.btn-table-danger:hover {
+  background-color: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+}
+
+[data-theme="light"] .btn-table-action {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+[data-theme="light"] .btn-table-action:hover {
+  background-color: #f1f5f9;
+}
+
 /* =========================================================================
    6. TABLES & CARDS
    ========================================================================= */
@@ -695,6 +744,25 @@ body {
   border-bottom: 1px solid var(--border-color);
 }
 
+.table-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0 0 0.2rem 0;
+  letter-spacing: -0.2px;
+}
+
+[data-theme="light"] .table-title {
+  color: #0f172a;
+}
+
+.table-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+  font-weight: 400;
+}
+
 .table-header-total {
   text-align: right;
   display: flex;
@@ -710,8 +778,8 @@ body {
 }
 
 .table-header-total-amount {
-  font-size: 1.6rem;
-  font-weight: 900;
+  font-size: 1.45rem;
+  font-weight: 800;
   color: #34d399;
   line-height: 1.2;
 }
@@ -723,13 +791,15 @@ body {
 .amount-sale {
   color: #34d399 !important;
   font-weight: 700 !important;
-  font-size: 1.15rem !important;
+  font-size: 0.95rem !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace, sans-serif;
 }
 
 .amount-purchase {
   color: #60a5fa !important;
   font-weight: 700 !important;
-  font-size: 1.15rem !important;
+  font-size: 0.95rem !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace, sans-serif;
 }
 
 [data-theme="light"] .amount-sale {
@@ -757,20 +827,22 @@ body {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .data-table th {
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.25);
   color: var(--text-muted);
   font-weight: 600;
-  padding: 0.85rem 1rem;
+  font-size: 0.82rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
 }
 
 .data-table td {
-  padding: 0.85rem 1rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.88rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 

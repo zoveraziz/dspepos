@@ -204,13 +204,13 @@ export default function ShowroomApp() {
       tr.innerHTML = `
         <td class="font-bold text-amber-400 font-mono">#${s.serial_no}</td>
         <td class="text-slate-300">${s.time}</td>
-        <td class="font-semibold text-white">কাস্টমার #${s.serial_no}</td>
+        <td class="font-medium text-white">কাস্টমার #${s.serial_no}</td>
         <td class="amount-sale">৳${s.amount.toFixed(2)}</td>
         <td class="text-right">
-          <button data-action="print" data-id="${s.id}" class="btn-secondary mr-2" title="রিসিট প্রিন্ট">
+          <button data-action="print" data-id="${s.id}" class="btn-table-action mr-1.5" title="রিসিট প্রিন্ট">
             🖨️ স্লিপ
           </button>
-          <button data-action="delete" data-id="${s.id}" class="btn-danger" title="মুছুন">
+          <button data-action="delete" data-id="${s.id}" class="btn-table-danger" title="মুছুন">
             🗑️
           </button>
         </td>
@@ -411,10 +411,10 @@ export default function ShowroomApp() {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="text-slate-300">${p.time}</td>
-        <td class="font-semibold text-white">${p.notes || "DSP মাল ক্রয়"}</td>
+        <td class="font-medium text-white">${p.notes || "DSP মাল ক্রয়"}</td>
         <td class="amount-purchase">৳${p.amount.toFixed(2)}</td>
         <td class="text-right">
-          <button data-action="delete" data-id="${p.id}" class="btn-danger">🗑️</button>
+          <button data-action="delete" data-id="${p.id}" class="btn-table-danger" title="মুছুন">🗑️</button>
         </td>
       `;
       fragment.appendChild(tr);
@@ -756,8 +756,8 @@ export default function ShowroomApp() {
             <div className="table-card">
               <div className="table-header">
                 <div>
-                  <h2 className="text-lg font-bold text-white">আজকের বিক্রি (কাস্টমার বাই কাস্টমার)</h2>
-                  <p className="text-xs text-slate-400">প্রতিটি কাস্টমারের বিক্রির টাকা ক্রমানুসারে নিচে যোগ হচ্ছে</p>
+                  <h2 className="table-title">আজকের বিক্রি</h2>
+                  <p className="table-subtitle">প্রতিটি কাস্টমারের বিক্রির টাকা ক্রমানুসারে নিচে যোগ হচ্ছে</p>
                 </div>
                 <div className="table-header-total">
                   <span className="table-header-total-label">আজকের সর্বমোট বিক্রি:</span>
@@ -816,8 +816,8 @@ export default function ShowroomApp() {
             <div className="table-card">
               <div className="table-header">
                 <div>
-                  <h2 className="text-lg font-bold text-white">দৈনিক ক্রয়, বিক্রি ও অবশিষ্ট স্টক শিট</h2>
-                  <p className="text-xs text-slate-400">প্রতিদিনের হিসাব এক কলামে ক্রয়, এক কলামে বিক্রি এবং এক কলামে অবশিষ্ট স্টক</p>
+                  <h2 className="table-title">দৈনিক ক্রয়, বিক্রি ও অবশিষ্ট স্টক শিট</h2>
+                  <p className="table-subtitle">প্রতিদিনের হিসাব এক কলামে ক্রয়, এক কলামে বিক্রি এবং এক কলামে অবশিষ্ট স্টক</p>
                 </div>
                 <button
                   type="button"
@@ -950,8 +950,8 @@ export default function ShowroomApp() {
         {activeTab === "purchase" && (
           <div className="space-y-6 w-full">
             <div className="table-card p-6 border-2 border-blue-500/40">
-              <h2 className="text-lg font-bold text-white mb-2">📦 মাল ক্রয় এন্ট্রি (মালিকের হিসাব)</h2>
-              <p className="text-xs text-slate-400 mb-4">
+              <h2 className="table-title mb-1">📦 মাল ক্রয় এন্ট্রি (মালিকের হিসাব)</h2>
+              <p className="table-subtitle mb-4">
                 শোরুমের জন্য আজ কত টাকার মাল ক্রয় করেছেন তা এখানে যোগ করুন। এটি স্বয়ংক্রিয়ভাবে স্টক শিটে যোগ হবে।
               </p>
 
@@ -986,7 +986,7 @@ export default function ShowroomApp() {
 
             <div className="table-card">
               <div className="table-header">
-                <h3 className="font-bold text-white">আজকের মাল ক্রয়ের তালিকা</h3>
+                <h3 className="table-title">আজকের মাল ক্রয়ের তালিকা</h3>
               </div>
               <div className="table-wrapper">
                 <table className="data-table" onClick={handlePurchaseTableClick}>
