@@ -110,17 +110,27 @@ class PrintBridge {
       document.body.appendChild(mount);
     }
 
+    const formatBnMoney = (n: number) => {
+      const isNeg = n < 0;
+      const formatted = Math.abs(n).toLocaleString("bn-BD");
+      return isNeg ? `-৳${formatted}` : `৳${formatted}`;
+    };
+
     const rowsHtml = rows
       .map(
-        (r) => `
+        (r) => {
+          const parts = r.date.split("-");
+          const dmy = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : r.date;
+          return `
       <tr style="border-bottom: 1px solid #e2e8f0;">
-        <td style="padding: 6px 8px; text-align: center; font-family: monospace;">${r.date}</td>
-        <td style="padding: 6px 8px; text-align: right; color: #1e40af; font-weight: 600;">৳${r.total_purchase.toLocaleString("bn-BD")}</td>
-        <td style="padding: 6px 8px; text-align: right; color: #047857; font-weight: 600;">৳${r.total_sale.toLocaleString("bn-BD")}</td>
-        <td style="padding: 6px 8px; text-align: right; font-weight: 700;">৳${r.remaining_stock.toLocaleString("bn-BD")}</td>
+        <td style="padding: 6px 8px; text-align: center; font-family: 'Hind Siliguri', sans-serif; font-weight: 600;">${dmy}</td>
+        <td style="padding: 6px 8px; text-align: right; color: #1e40af; font-weight: 600;">${formatBnMoney(r.total_purchase)}</td>
+        <td style="padding: 6px 8px; text-align: right; color: #047857; font-weight: 600;">${formatBnMoney(r.total_sale)}</td>
+        <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: ${r.remaining_stock < 0 ? '#dc2626' : '#b45309'};">${formatBnMoney(r.remaining_stock)}</td>
         <td style="padding: 6px 8px; text-align: center;">${r.sales_count} জন</td>
       </tr>
-    `
+    `;
+        }
       )
       .join("");
 
@@ -138,15 +148,15 @@ class PrintBridge {
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;">
           <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; text-align: center; background: #f8fafc;">
             <div style="font-size: 11px; color: #64748b; font-weight: 600;">মোট মাল ক্রয়</div>
-            <div style="font-size: 15px; font-weight: 800; color: #1e40af; margin-top: 2px;">৳${totals.purchase.toLocaleString("bn-BD")}</div>
+            <div style="font-size: 15px; font-weight: 800; color: #1e40af; margin-top: 2px;">${formatBnMoney(totals.purchase)}</div>
           </div>
           <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; text-align: center; background: #f8fafc;">
             <div style="font-size: 11px; color: #64748b; font-weight: 600;">মোট মাল বিক্রি</div>
-            <div style="font-size: 15px; font-weight: 800; color: #047857; margin-top: 2px;">৳${totals.sale.toLocaleString("bn-BD")}</div>
+            <div style="font-size: 15px; font-weight: 800; color: #047857; margin-top: 2px;">${formatBnMoney(totals.sale)}</div>
           </div>
           <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; text-align: center; background: #f8fafc;">
             <div style="font-size: 11px; color: #64748b; font-weight: 600;">অবশিষ্ট স্টক / ব্যালেন্স</div>
-            <div style="font-size: 15px; font-weight: 800; color: #b45309; margin-top: 2px;">৳${totals.stock.toLocaleString("bn-BD")}</div>
+            <div style="font-size: 15px; font-weight: 800; color: ${totals.stock < 0 ? '#dc2626' : '#b45309'}; margin-top: 2px;">${formatBnMoney(totals.stock)}</div>
           </div>
           <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; text-align: center; background: #f8fafc;">
             <div style="font-size: 11px; color: #64748b; font-weight: 600;">মোট কাস্টমার সংখ্যা</div>

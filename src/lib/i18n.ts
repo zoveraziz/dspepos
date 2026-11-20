@@ -27,15 +27,30 @@ export function formatCurrency(
   mode: DigitMode,
   options: { decimals?: number } = {}
 ): string {
-  const decimals = options.decimals !== undefined ? options.decimals : (val % 1 === 0 ? 0 : 2);
-  const formatted = val.toLocaleString("en-US", {
+  const isNegative = val < 0;
+  const absVal = Math.abs(val);
+  const decimals = options.decimals !== undefined ? options.decimals : (absVal % 1 === 0 ? 0 : 2);
+  // Format with South Asian lakh/crore grouping standard in Bangladesh & India
+  const formatted = absVal.toLocaleString("en-IN", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
+  const prefix = isNegative ? "-৳" : "৳";
   if (mode === "bn") {
-    return `৳${toBengaliDigits(formatted)}`;
+    return `${prefix}${toBengaliDigits(formatted)}`;
   }
-  return `৳${formatted}`;
+  return `${prefix}${formatted}`;
+}
+
+export function formatLedgerDate(dateIso: string, mode: DigitMode): string {
+  if (!dateIso) return "";
+  const parts = dateIso.split("-");
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    const dmy = `${d}/${m}/${y}`;
+    return formatDigitString(dmy, mode);
+  }
+  return formatDigitString(dateIso, mode);
 }
 
 export function formatCustomerCount(count: number, digitMode: DigitMode, uiLang: UiLang): string {

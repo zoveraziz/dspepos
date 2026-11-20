@@ -15,6 +15,8 @@ import {
   formatDigitString,
   formatCustomerCount,
   formatSpeed,
+  formatLedgerDate,
+  toEnglishDigits,
 } from "@/lib/i18n";
 
 export default function ShowroomApp() {
@@ -267,7 +269,7 @@ export default function ShowroomApp() {
       const amountDisplay = formatCurrency(s.amount, curDigits, { decimals: 2 });
 
       tr.innerHTML = `
-        <td class="font-bold text-amber-400 font-mono">#${serialDisplay}</td>
+        <td class="font-bold text-amber-400">#${serialDisplay}</td>
         <td class="text-slate-300">${timeDisplay}</td>
         <td class="font-medium text-white">${custLabel}</td>
         <td class="amount-sale">${amountDisplay}</td>
@@ -326,14 +328,21 @@ export default function ShowroomApp() {
 
     if (ledgerSearch.trim()) {
       const q = ledgerSearch.trim().toLowerCase();
-      filtered = filtered.filter(
-        (r) =>
-          r.date.toLowerCase().includes(q) ||
-          r.total_purchase.toString().includes(q) ||
-          r.total_sale.toString().includes(q) ||
-          r.remaining_stock.toString().includes(q) ||
-          r.sales_count.toString().includes(q)
-      );
+      const qEn = toEnglishDigits(q);
+      filtered = filtered.filter((r) => {
+        const parts = r.date.split("-");
+        const dmySlash = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : "";
+        const dmyHyphen = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : "";
+        return (
+          r.date.includes(qEn) ||
+          dmySlash.includes(qEn) ||
+          dmyHyphen.includes(qEn) ||
+          r.total_purchase.toString().includes(qEn) ||
+          r.total_sale.toString().includes(qEn) ||
+          r.remaining_stock.toString().includes(qEn) ||
+          r.sales_count.toString().includes(qEn)
+        );
+      });
     }
 
     filteredMonthlySummariesRef.current = filtered;
@@ -364,20 +373,20 @@ export default function ShowroomApp() {
         const tr = document.createElement("tr");
         const isPositive = row.remaining_stock >= 0;
 
-        const dateStr = formatDigitString(row.date, curDigits);
-        const purchaseStr = formatCurrency(row.total_purchase, curDigits);
-        const saleStr = formatCurrency(row.total_sale, curDigits);
-        const stockStr = formatCurrency(row.remaining_stock, curDigits);
+        const dateStr = formatLedgerDate(row.date, curDigits);
+        const purchaseStr = formatCurrency(row.total_purchase, curDigits, { decimals: 2 });
+        const saleStr = formatCurrency(row.total_sale, curDigits, { decimals: 2 });
+        const stockStr = formatCurrency(row.remaining_stock, curDigits, { decimals: 2 });
         const custStr = formatCustomerCount(row.sales_count, curDigits, curLang);
 
         tr.innerHTML = `
-          <td class="font-semibold text-slate-200 font-mono">${dateStr}</td>
-          <td class="font-bold text-blue-400">${purchaseStr}</td>
-          <td class="font-bold text-emerald-400">${saleStr}</td>
-          <td class="font-bold ${isPositive ? 'text-amber-400' : 'text-red-400'}">
+          <td class="ledger-cell-date">${dateStr}</td>
+          <td class="ledger-cell-purchase">${purchaseStr}</td>
+          <td class="ledger-cell-sale">${saleStr}</td>
+          <td class="${isPositive ? 'ledger-cell-stock-pos' : 'ledger-cell-stock-neg'}">
             ${stockStr}
           </td>
-          <td class="text-slate-400">${custStr}</td>
+          <td class="ledger-cell-cust">${custStr}</td>
         `;
         fragment.appendChild(tr);
       });
@@ -389,9 +398,9 @@ export default function ShowroomApp() {
     if (monthlyTotalSaleRef.current) monthlyTotalSaleRef.current.textContent = formatCurrency(totalFilteredSale, curDigits);
     if (monthlyRemainingStockRef.current) monthlyRemainingStockRef.current.textContent = formatCurrency(netBalance, curDigits);
 
-    if (monthlyGrandTotalPurchaseRef.current) monthlyGrandTotalPurchaseRef.current.textContent = formatCurrency(totalFilteredPurchase, curDigits);
-    if (monthlyGrandTotalSaleRef.current) monthlyGrandTotalSaleRef.current.textContent = formatCurrency(totalFilteredSale, curDigits);
-    if (monthlyGrandTotalStockRef.current) monthlyGrandTotalStockRef.current.textContent = formatCurrency(netBalance, curDigits);
+    if (monthlyGrandTotalPurchaseRef.current) monthlyGrandTotalPurchaseRef.current.textContent = formatCurrency(totalFilteredPurchase, curDigits, { decimals: 2 });
+    if (monthlyGrandTotalSaleRef.current) monthlyGrandTotalSaleRef.current.textContent = formatCurrency(totalFilteredSale, curDigits, { decimals: 2 });
+    if (monthlyGrandTotalStockRef.current) monthlyGrandTotalStockRef.current.textContent = formatCurrency(netBalance, curDigits, { decimals: 2 });
     if (monthlyGrandTotalCustRef.current) monthlyGrandTotalCustRef.current.textContent = formatCustomerCount(totalFilteredCust, curDigits, curLang);
   };
 
@@ -1042,9 +1051,9 @@ export default function ShowroomApp() {
                   <tfoot>
                     <tr className="ledger-footer-total">
                       <td className="text-white font-bold">{t.grandTotalLabel}</td>
-                      <td ref={monthlyGrandTotalPurchaseRef} className="font-bold text-blue-400">{formatCurrency(0, digitMode)}</td>
-                      <td ref={monthlyGrandTotalSaleRef} className="font-bold text-emerald-400">{formatCurrency(0, digitMode)}</td>
-                      <td ref={monthlyGrandTotalStockRef} className="font-bold text-amber-400">{formatCurrency(0, digitMode)}</td>
+                      <td ref={monthlyGrandTotalPurchaseRef} className="font-bold text-blue-400">{formatCurrency(0, digitMode, { decimals: 2 })}</td>
+                      <td ref={monthlyGrandTotalSaleRef} className="font-bold text-emerald-400">{formatCurrency(0, digitMode, { decimals: 2 })}</td>
+                      <td ref={monthlyGrandTotalStockRef} className="font-bold text-amber-400">{formatCurrency(0, digitMode, { decimals: 2 })}</td>
                       <td ref={monthlyGrandTotalCustRef} className="font-bold text-slate-300">{formatCustomerCount(0, digitMode, uiLang)}</td>
                     </tr>
                   </tfoot>
@@ -1251,7 +1260,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.5.5
+                        v2.5.6
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
