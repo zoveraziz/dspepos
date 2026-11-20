@@ -763,64 +763,59 @@ export default function ShowroomApp() {
 
         {/* TAB 4: GOOGLE SHEETS SYNC SETTINGS */}
         {activeTab === "sync" && (
-          <div className="max-w-3xl mx-auto space-y-6 pb-12 px-2 sm:px-0">
+          <div className="sync-page-container">
             {/* CARD 1: Google Sheets 2-Way Live Sync Config */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-7 shadow-xl backdrop-blur relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600" />
-              
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-2xl text-emerald-400 flex-shrink-0">
+            <div className="sync-card sync-card-emerald">
+              <div className="sync-card-header">
+                <div className="sync-header-left">
+                  <div className="sync-card-icon sync-card-icon-emerald">
                     📊
                   </div>
                   <div>
-                    <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight flex items-center gap-2">
+                    <h2 className="sync-card-title">
                       গুগল শিট ২-মুখী অটো সিঙ্ক
-                      <span className="text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                      <span className="sync-badge sync-badge-emerald">
                         লাইভ ব্যাকআপ
                       </span>
                     </h2>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="sync-card-desc">
                       মোবাইল, পিসি এবং গুগল স্প্রেডশিটে স্বয়ংক্রিয়ভাবে লেনদেন সিঙ্ক ও ব্যাকআপ রাখুন।
                     </p>
                   </div>
                 </div>
               </div>
 
-              <form onSubmit={handleSaveSettings} className="space-y-4">
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center text-xs">
-                    <label className="font-semibold text-slate-300 flex items-center gap-1.5">
-                      <span>🔗 Google Apps Script Web App URL</span>
+              <form onSubmit={handleSaveSettings}>
+                <div className="form-group">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                    <label style={{ fontWeight: 600, color: "var(--text-main)" }}>
+                      🔗 Google Apps Script Web App URL
                     </label>
-                    <span className="text-slate-500 font-mono text-[11px]">POST /exec Endpoint</span>
+                    <span style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "monospace" }}>
+                      POST /exec Endpoint
+                    </span>
                   </div>
-                  <div className="relative">
-                    <input
-                      ref={gasUrlInputRef}
-                      type="url"
-                      defaultValue={syncEngine.getEndpointUrl()}
-                      placeholder="https://script.google.com/macros/s/.../exec"
-                      className="w-full bg-slate-950/80 border border-slate-700/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-600 outline-none transition font-mono tracking-tight"
-                      required
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-500">
+                  <input
+                    ref={gasUrlInputRef}
+                    type="url"
+                    defaultValue={syncEngine.getEndpointUrl()}
+                    placeholder="https://script.google.com/macros/s/.../exec"
+                    className="sync-input-field"
+                    required
+                  />
+                  <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px" }}>
                     * আপনার স্প্রেডশিট থেকে প্রাপ্ত Apps Script Web App ডেপ্লয়মেন্ট URL লিংকটি এখানে বসান।
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 pt-1">
-                  <button
-                    type="submit"
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold px-6 py-2.5 rounded-xl shadow-lg shadow-emerald-900/30 active:scale-95 transition cursor-pointer text-sm"
-                  >
+                <div className="sync-button-group">
+                  <button type="submit" className="btn-sync-submit">
                     <span>💾</span> সেভ ও টেস্ট সিঙ্ক
                   </button>
                   <button
                     type="button"
                     onClick={() => syncEngine.triggerSync()}
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium px-5 py-2.5 rounded-xl border border-slate-700 active:scale-95 transition cursor-pointer text-sm"
+                    className="btn-sync-now"
                   >
                     <span>🔄</span> এখনই সিঙ্ক করুন
                   </button>
@@ -829,99 +824,83 @@ export default function ShowroomApp() {
             </div>
 
             {/* CARD 2: Step-by-Step Setup Guide */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 sm:p-7 shadow-lg relative">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-slate-800/80 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-lg">
+            <div className="sync-card">
+              <div className="sync-card-header" style={{ borderBottom: "1px solid var(--border-color)", paddingBottom: "1rem" }}>
+                <div className="sync-header-left">
+                  <div className="sync-card-icon sync-card-icon-blue">
                     📋
                   </div>
                   <div>
-                    <h3 className="font-bold text-white text-base">গুগল শিট যুক্ত করার সহজ নিয়ম</h3>
-                    <p className="text-xs text-slate-400">মাত্র ৪টি সহজ ধাপে সম্পূর্ণ ফ্রিতে সিঙ্ক চালু করুন</p>
+                    <h3 className="sync-card-title">গুগল শিট যুক্ত করার সহজ নিয়ম</h3>
+                    <p className="sync-card-desc">মাত্র ৪টি সহজ ধাপে সম্পূর্ণ ফ্রিতে সিঙ্ক চালু করুন</p>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleCopyGasCode}
-                  className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 px-3.5 py-1.5 rounded-lg active:scale-95 transition cursor-pointer self-start sm:self-auto"
+                  className="btn-copy-code"
                 >
                   <span>📋</span> {gasCopied ? "✓ কোড কপি হয়েছে!" : "Apps Script কোড কপি করুন"}
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="sync-steps-grid">
                 {/* Step 1 */}
-                <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex gap-3.5 hover:border-slate-700 transition">
-                  <div className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-400 font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5 border border-blue-500/25">
-                    ০১
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-200 mb-1">নতুন স্প্রেডশিট খুলুন</h4>
-                    <p className="text-[12px] text-slate-400 leading-relaxed">
-                      গুগল ড্রাইভে গিয়ে একটি নতুন গুগল স্প্রেডশিট (Google Sheet) তৈরি করুন।
-                    </p>
+                <div className="sync-step-box">
+                  <div className="sync-step-num">০১</div>
+                  <div className="sync-step-content">
+                    <h4>নতুন স্প্রেডশিট খুলুন</h4>
+                    <p>গুগল ড্রাইভে গিয়ে একটি নতুন গুগল স্প্রেডশিট (Google Sheet) তৈরি করুন।</p>
                   </div>
                 </div>
 
                 {/* Step 2 */}
-                <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex gap-3.5 hover:border-slate-700 transition">
-                  <div className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-400 font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5 border border-blue-500/25">
-                    ০২
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-200 mb-1">Apps Script-এ যান</h4>
-                    <p className="text-[12px] text-slate-400 leading-relaxed">
-                      শিটের ওপরের মেনু থেকে <span className="text-amber-300 font-mono text-[11px] bg-slate-900 px-1 py-0.5 rounded">Extensions &gt; Apps Script</span> ওপেন করুন।
-                    </p>
+                <div className="sync-step-box">
+                  <div className="sync-step-num">০২</div>
+                  <div className="sync-step-content">
+                    <h4>Apps Script-এ যান</h4>
+                    <p>শিটের ওপরের মেনু থেকে Extensions &gt; Apps Script ওপেন করুন।</p>
                   </div>
                 </div>
 
                 {/* Step 3 */}
-                <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex gap-3.5 hover:border-slate-700 transition">
-                  <div className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-400 font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5 border border-blue-500/25">
-                    ০৩
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-200 mb-1">কোড পেস্ট ও Web app ডেপ্লয়</h4>
-                    <p className="text-[12px] text-slate-400 leading-relaxed">
-                      পুরনো কোড মুছে আমাদের দেওয়া কোড পেস্ট করুন এবং <span className="text-emerald-300 font-mono text-[11px] bg-slate-900 px-1 py-0.5 rounded">Deploy &gt; Web app</span> হিসেবে ডেপ্লয় করুন (Who has access: Anyone)।
-                    </p>
+                <div className="sync-step-box">
+                  <div className="sync-step-num">০৩</div>
+                  <div className="sync-step-content">
+                    <h4>কোড পেস্ট ও Web app ডেপ্লয়</h4>
+                    <p>পুরনো কোড মুছে আমাদের দেওয়া কোড পেস্ট করুন এবং Deploy &gt; Web app হিসেবে ডেপ্লয় করুন (Who has access: Anyone)।</p>
                   </div>
                 </div>
 
                 {/* Step 4 */}
-                <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex gap-3.5 hover:border-slate-700 transition">
-                  <div className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-400 font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5 border border-blue-500/25">
-                    ০৪
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-200 mb-1">লিংক সেভ ও চালু</h4>
-                    <p className="text-[12px] text-slate-400 leading-relaxed">
-                      পাওয়া ওয়েব অ্যাপ লিঙ্কটি ওপরের বক্সে পেস্ট করে <span className="text-teal-300 font-semibold">"সেভ ও টেস্ট সিঙ্ক"</span> বাটনে চাপ দিন।
-                    </p>
+                <div className="sync-step-box">
+                  <div className="sync-step-num">০৪</div>
+                  <div className="sync-step-content">
+                    <h4>লিংক সেভ ও চালু</h4>
+                    <p>পাওয়া ওয়েব অ্যাপ লিঙ্কটি ওপরের বক্সে পেস্ট করে "সেভ ও টেস্ট সিঙ্ক" বাটনে চাপ দিন।</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* CARD 3: Version Update & Cache Refresh */}
-            <div className="bg-slate-900/80 border border-amber-500/30 rounded-2xl p-6 sm:p-7 shadow-lg relative overflow-hidden">
-              <div className="absolute top-0 left-0 bottom-0 w-1 bg-amber-500" />
-              
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl flex-shrink-0 mt-0.5">
+            <div className="sync-card sync-card-amber">
+              <div className="sync-row-layout">
+                <div className="sync-header-left">
+                  <div className="sync-card-icon sync-card-icon-amber">
                     ⚡
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-amber-300 text-base">নতুন ভার্সন আপডেট ও ক্যাশ রিফ্রেশ</h3>
-                      <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                        v2.3.0
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                      <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#fbbf24" }}>
+                        নতুন ভার্সন আপডেট ও ক্যাশ রিফ্রেশ
+                      </h3>
+                      <span className="sync-badge sync-badge-amber">
+                        v2.4.0
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-1 leading-relaxed max-w-xl">
+                    <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
                       মোবাইল বা পিসিতে পুরোনো ক্যাশের কারণে সিঙ্ক আটকে থাকলে বা নতুন কোনো আপডেট না দেখালে এই বাটনে চাপ দিন। এটি ব্রাউজারের পুরোনো ফাইল পরিষ্কার করে সরাসরি লেটেস্ট ভার্সন লোড করবে।
                     </p>
                   </div>
@@ -930,7 +909,7 @@ export default function ShowroomApp() {
                 <button
                   type="button"
                   onClick={handleForceUpdate}
-                  className="inline-flex items-center justify-center gap-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 font-semibold px-5 py-2.5 rounded-xl active:scale-95 transition cursor-pointer text-xs whitespace-nowrap self-start sm:self-auto shadow-sm"
+                  className="btn-warning-action"
                 >
                   <span>🔄</span> ক্যাশ ক্লিয়ার ও আপডেট
                 </button>
@@ -938,22 +917,22 @@ export default function ShowroomApp() {
             </div>
 
             {/* CARD 4: System Fresh Reset Danger Zone */}
-            <div className="bg-slate-900/80 border border-red-500/30 rounded-2xl p-6 sm:p-7 shadow-lg relative overflow-hidden">
-              <div className="absolute top-0 left-0 bottom-0 w-1 bg-red-500" />
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400 text-xl flex-shrink-0 mt-0.5">
+            <div className="sync-card sync-card-danger">
+              <div className="sync-row-layout">
+                <div className="sync-header-left">
+                  <div className="sync-card-icon sync-card-icon-red">
                     ⚠️
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-red-400 text-base">সিস্টেম ফ্রেশ রিসেট (নতুন করে শুরু)</h3>
-                      <span className="text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded-full">
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                      <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#f87171" }}>
+                        সিস্টেম ফ্রেশ রিসেট (নতুন করে শুরু)
+                      </h3>
+                      <span className="sync-badge sync-badge-red">
                         বিপদজনক অঞ্চল
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-1 leading-relaxed max-w-xl">
+                    <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
                       টেস্টিংয়ের সময় যোগ করা সমস্ত বিক্রি ও ক্রয়ের হিসাব গুগল শিট এবং লোকাল ডাটাবেজ থেকে মুছে কাস্টমার সিরিয়াল ও স্টক হিসাব একদম #১ থেকে ফ্রেশ শুরু করতে নিচের বাটনে চাপ দিন।
                     </p>
                   </div>
@@ -962,7 +941,7 @@ export default function ShowroomApp() {
                 <button
                   type="button"
                   onClick={handleClearAllData}
-                  className="inline-flex items-center justify-center gap-2 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 font-semibold px-5 py-2.5 rounded-xl active:scale-95 transition cursor-pointer text-xs whitespace-nowrap self-start sm:self-auto shadow-sm"
+                  className="btn-danger-action"
                 >
                   <span>🗑️</span> সমস্ত ডাটা মুছুন (রিসেট)
                 </button>
