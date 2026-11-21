@@ -58,6 +58,11 @@ export default function ShowroomApp() {
   const [customToDate, setCustomToDate] = useState<string>("");
   const [ledgerSearch, setLedgerSearch] = useState<string>("");
 
+  const dateFilterPresetRef = useRef<"all" | "today" | "7days" | "month" | "custom">("all");
+  const customFromDateRef = useRef<string>("");
+  const customToDateRef = useRef<string>("");
+  const ledgerSearchRef = useRef<string>("");
+
   const rawMonthlySummariesRef = useRef<DailySummaryRow[]>([]);
   const filteredMonthlySummariesRef = useRef<DailySummaryRow[]>([]);
 
@@ -391,6 +396,10 @@ export default function ShowroomApp() {
 
   // Effect to re-filter and re-render monthly summaries when filter states change
   useEffect(() => {
+    dateFilterPresetRef.current = dateFilterPreset;
+    customFromDateRef.current = customFromDate;
+    customToDateRef.current = customToDate;
+    ledgerSearchRef.current = ledgerSearch;
     applyMonthlyFilterAndRender();
   }, [dateFilterPreset, customFromDate, customToDate, ledgerSearch]);
 
@@ -408,28 +417,33 @@ export default function ShowroomApp() {
       return `${year}-${month}-${day}`;
     };
 
+    const currentPreset = dateFilterPresetRef.current;
+    const currentFrom = customFromDateRef.current;
+    const currentTo = customToDateRef.current;
+    const currentSearch = ledgerSearchRef.current;
+
     let filtered = allRows.slice();
 
-    if (dateFilterPreset === "today") {
+    if (currentPreset === "today") {
       filtered = filtered.filter((r) => r.date === todayStr);
-    } else if (dateFilterPreset === "7days") {
+    } else if (currentPreset === "7days") {
       const sevenDaysAgo = new Date(todayDateObj.getTime() - 6 * 24 * 60 * 60 * 1000);
       const startStr = toDateStr(sevenDaysAgo);
       filtered = filtered.filter((r) => r.date >= startStr && r.date <= todayStr);
-    } else if (dateFilterPreset === "month") {
+    } else if (currentPreset === "month") {
       const currentMonthPrefix = todayStr.substring(0, 7);
       filtered = filtered.filter((r) => r.date.startsWith(currentMonthPrefix));
-    } else if (dateFilterPreset === "custom") {
-      if (customFromDate) {
-        filtered = filtered.filter((r) => r.date >= customFromDate);
+    } else if (currentPreset === "custom") {
+      if (currentFrom) {
+        filtered = filtered.filter((r) => r.date >= currentFrom);
       }
-      if (customToDate) {
-        filtered = filtered.filter((r) => r.date <= customToDate);
+      if (currentTo) {
+        filtered = filtered.filter((r) => r.date <= currentTo);
       }
     }
 
-    if (ledgerSearch.trim()) {
-      const q = ledgerSearch.trim().toLowerCase();
+    if (currentSearch.trim()) {
+      const q = currentSearch.trim().toLowerCase();
       const qEn = toEnglishDigits(q);
       filtered = filtered.filter((r) => {
         const parts = r.date.split("-");
@@ -1508,7 +1522,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.6.0
+                        v2.6.1
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
