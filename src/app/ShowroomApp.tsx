@@ -30,7 +30,7 @@ export default function ShowroomApp() {
   const t = translations[uiLang];
 
   // Store / Showroom Profile (Custom branding for multiple shops)
-  const [shopName, setShopName] = useState<string>("ডিজিটাল সার্ভিস পয়েন্ট");
+  const [shopName, setShopName] = useState<string>("মেসার্স জামান ট্রেডার্স");
   const [shopSubtitle, setShopSubtitle] = useState<string>("DSP ePOS");
   const [shopPhone, setShopPhone] = useState<string>("");
   const [profileSavedMsg, setProfileSavedMsg] = useState<boolean>(false);
@@ -130,7 +130,12 @@ export default function ShowroomApp() {
       }
 
       const savedName = localStorage.getItem("dsp_shop_name");
-      if (savedName) setShopName(savedName);
+      if (savedName && savedName !== "ডিজিটাল সার্ভিস পয়েন্ট") {
+        setShopName(savedName);
+      } else {
+        setShopName("মেসার্স জামান ট্রেডার্স");
+        try { localStorage.setItem("dsp_shop_name", "মেসার্স জামান ট্রেডার্স"); } catch {}
+      }
       const savedSub = localStorage.getItem("dsp_shop_subtitle");
       if (savedSub) setShopSubtitle(savedSub);
       const savedPhone = localStorage.getItem("dsp_shop_phone");
@@ -761,7 +766,7 @@ export default function ShowroomApp() {
   const handleSaveShopProfile = (e?: React.MouseEvent | React.FormEvent) => {
     if (e) e.preventDefault();
     if (shopNameInputRef.current) {
-      const name = shopNameInputRef.current.value.trim() || "ডিজিটাল সার্ভিস পয়েন্ট";
+      const name = shopNameInputRef.current.value.trim() || "মেসার্স জামান ট্রেডার্স";
       setShopName(name);
       localStorage.setItem("dsp_shop_name", name);
     }
@@ -796,7 +801,7 @@ export default function ShowroomApp() {
       syncEngine.setEndpointUrl(url);
     }
     if (shopNameInputRef.current) {
-      const name = shopNameInputRef.current.value.trim() || "ডিজিটাল সার্ভিস পয়েন্ট";
+      const name = shopNameInputRef.current.value.trim() || "মেসার্স জামান ট্রেডার্স";
       setShopName(name);
       localStorage.setItem("dsp_shop_name", name);
     }
@@ -1401,7 +1406,7 @@ export default function ShowroomApp() {
                         ref={shopNameInputRef}
                         type="text"
                         defaultValue={shopName}
-                        placeholder={uiLang === "en" ? "e.g. Badsha Sweets" : "যেমন: বাদশাহ এন্টারপ্রাইজ"}
+                        placeholder={uiLang === "en" ? "e.g. M/S Zaman Traders" : "যেমন: মেসার্স জামান ট্রেডার্স"}
                         className="sync-input-field"
                       />
                     </div>
@@ -1585,7 +1590,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.6.2
+                        v2.6.3
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
