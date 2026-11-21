@@ -33,6 +33,7 @@ export default function ShowroomApp() {
   const [shopName, setShopName] = useState<string>("ডিজিটাল সার্ভিস পয়েন্ট");
   const [shopSubtitle, setShopSubtitle] = useState<string>("DSP ePOS");
   const [shopPhone, setShopPhone] = useState<string>("");
+  const [profileSavedMsg, setProfileSavedMsg] = useState<boolean>(false);
   const shopNameInputRef = useRef<HTMLInputElement>(null);
   const shopSubtitleInputRef = useRef<HTMLInputElement>(null);
   const shopPhoneInputRef = useRef<HTMLInputElement>(null);
@@ -757,6 +758,37 @@ export default function ShowroomApp() {
     }
   };
 
+  const handleSaveShopProfile = (e?: React.MouseEvent | React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (shopNameInputRef.current) {
+      const name = shopNameInputRef.current.value.trim() || "ডিজিটাল সার্ভিস পয়েন্ট";
+      setShopName(name);
+      localStorage.setItem("dsp_shop_name", name);
+    }
+    if (shopSubtitleInputRef.current) {
+      const sub = shopSubtitleInputRef.current.value.trim() || "DSP ePOS";
+      setShopSubtitle(sub);
+      localStorage.setItem("dsp_shop_subtitle", sub);
+    }
+    if (shopPhoneInputRef.current) {
+      const phone = shopPhoneInputRef.current.value.trim();
+      setShopPhone(phone);
+      localStorage.setItem("dsp_shop_phone", phone);
+    }
+    if (adminPinInputRef.current) {
+      const pin = adminPinInputRef.current.value.trim();
+      if (pin.length >= 4) {
+        setAdminPin(pin);
+        localStorage.setItem("dsp_admin_pin", pin);
+      } else if (pin.length > 0) {
+        alert(uiLang === "en" ? "PIN must be at least 4 digits." : "পিন অন্তত ৪ ডিজিটের হতে হবে।");
+        return;
+      }
+    }
+    setProfileSavedMsg(true);
+    setTimeout(() => setProfileSavedMsg(false), 3000);
+  };
+
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     if (gasUrlInputRef.current) {
@@ -1358,56 +1390,87 @@ export default function ShowroomApp() {
                   </div>
                 )}
 
-                {/* Shop / Showroom Profile (Name, Subtitle, Phone for Print Receipts) */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem", marginBottom: "1.25rem", padding: "1rem", backgroundColor: "rgba(0, 0, 0, 0.2)", borderRadius: "8px", border: "1px solid var(--border-color)" }}>
-                  <div className="form-group">
-                    <label style={{ fontWeight: 600, color: "var(--text-main)", fontSize: "0.85rem" }}>
-                      🏪 {uiLang === "en" ? "Shop / Showroom Name" : "দোকান বা শোরুমের নাম"}
-                    </label>
-                    <input
-                      ref={shopNameInputRef}
-                      type="text"
-                      defaultValue={shopName}
-                      placeholder={uiLang === "en" ? "e.g. Badsha Sweets" : "যেমন: বাদশাহ এন্টারপ্রাইজ"}
-                      className="sync-input-field"
-                    />
+                {/* Shop / Showroom Profile (Name, Subtitle, Phone for Print Receipts, and PIN) */}
+                <div style={{ backgroundColor: "rgba(0, 0, 0, 0.2)", borderRadius: "8px", border: "1px solid var(--border-color)", padding: "1rem", marginBottom: "1.25rem" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
+                    <div className="form-group">
+                      <label style={{ fontWeight: 600, color: "var(--text-main)", fontSize: "0.85rem" }}>
+                        🏪 {uiLang === "en" ? "Shop / Showroom Name" : "দোকান বা শোরুমের নাম"}
+                      </label>
+                      <input
+                        ref={shopNameInputRef}
+                        type="text"
+                        defaultValue={shopName}
+                        placeholder={uiLang === "en" ? "e.g. Badsha Sweets" : "যেমন: বাদশাহ এন্টারপ্রাইজ"}
+                        className="sync-input-field"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label style={{ fontWeight: 600, color: "var(--text-main)", fontSize: "0.85rem" }}>
+                        🏷️ {uiLang === "en" ? "Subtitle / Branch" : "উপ-শিরোনাম বা শাখা (স্লিপের জন্য)"}
+                      </label>
+                      <input
+                        ref={shopSubtitleInputRef}
+                        type="text"
+                        defaultValue={shopSubtitle}
+                        placeholder={uiLang === "en" ? "e.g. DSP ePOS / Main Branch" : "যেমন: DSP ePOS বা শাখা: চকবাজার"}
+                        className="sync-input-field"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label style={{ fontWeight: 600, color: "var(--text-main)", fontSize: "0.85rem" }}>
+                        📞 {uiLang === "en" ? "Contact Number / Address" : "মোবাইল নম্বর / ঠিকানা (রসিদের জন্য)"}
+                      </label>
+                      <input
+                        ref={shopPhoneInputRef}
+                        type="text"
+                        defaultValue={shopPhone}
+                        placeholder={uiLang === "en" ? "e.g. +88017XXXXXXXX" : "যেমন: মোবাইল: ০১৭১২-XXXXXX"}
+                        className="sync-input-field"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label style={{ fontWeight: 600, color: "var(--text-main)", fontSize: "0.85rem" }}>
+                        🔐 {uiLang === "en" ? "Admin Master PIN (4 Digits)" : "অ্যাডমিন মাস্টার পিন (৪ ডিজিট)"}
+                      </label>
+                      <input
+                        ref={adminPinInputRef}
+                        type="password"
+                        maxLength={8}
+                        defaultValue={adminPin}
+                        placeholder="যেমন: 7788"
+                        className="sync-input-field"
+                      />
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label style={{ fontWeight: 600, color: "var(--text-main)", fontSize: "0.85rem" }}>
-                      🏷️ {uiLang === "en" ? "Subtitle / Branch" : "উপ-শিরোনাম বা শাখা (স্লিপের জন্য)"}
-                    </label>
-                    <input
-                      ref={shopSubtitleInputRef}
-                      type="text"
-                      defaultValue={shopSubtitle}
-                      placeholder={uiLang === "en" ? "e.g. DSP ePOS / Main Branch" : "যেমন: DSP ePOS বা শাখা: চকবাজার"}
-                      className="sync-input-field"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label style={{ fontWeight: 600, color: "var(--text-main)", fontSize: "0.85rem" }}>
-                      📞 {uiLang === "en" ? "Contact Number / Address" : "মোবাইল নম্বর / ঠিকানা (রসিদের জন্য)"}
-                    </label>
-                    <input
-                      ref={shopPhoneInputRef}
-                      type="text"
-                      defaultValue={shopPhone}
-                      placeholder={uiLang === "en" ? "e.g. +88017XXXXXXXX" : "যেমন: মোবাইল: ০১৭১২-XXXXXX"}
-                      className="sync-input-field"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label style={{ fontWeight: 600, color: "var(--text-main)", fontSize: "0.85rem" }}>
-                      🔐 {uiLang === "en" ? "Admin Master PIN (4 Digits)" : "অ্যাডমিন মাস্টার পিন (৪ ডিজিট)"}
-                    </label>
-                    <input
-                      ref={adminPinInputRef}
-                      type="password"
-                      maxLength={8}
-                      defaultValue={adminPin}
-                      placeholder="যেমন: 7788"
-                      className="sync-input-field"
-                    />
+
+                  {/* Dedicated Save Button right below PIN & Profile Inputs */}
+                  <div style={{ marginTop: "1rem", paddingTop: "0.85rem", borderTop: "1px solid rgba(255, 255, 255, 0.08)", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={handleSaveShopProfile}
+                      className="btn-save-profile cursor-pointer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                        color: "#ffffff",
+                        fontWeight: 700,
+                        fontSize: "0.92rem",
+                        padding: "0.6rem 1.4rem",
+                        borderRadius: "8px",
+                        border: "none",
+                        boxShadow: "0 2px 8px rgba(16, 185, 129, 0.35)",
+                      }}
+                    >
+                      <span>💾</span> {uiLang === "en" ? "Save Shop Info & PIN" : "দোকানের তথ্য ও পিন সেভ করুন"}
+                    </button>
+                    {profileSavedMsg && (
+                      <span style={{ color: "#34d399", fontWeight: 700, fontSize: "0.9rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                        ✓ {uiLang === "en" ? "Shop info & PIN saved successfully!" : "দোকানের তথ্য ও পিন সফলভাবে সেভ হয়েছে!"}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -1522,7 +1585,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.6.1
+                        v2.6.2
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
