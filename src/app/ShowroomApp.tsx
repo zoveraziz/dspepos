@@ -275,9 +275,9 @@ export default function ShowroomApp() {
           syncMsgRef.current.textContent = curLang === "en" ? "❌ Sync Error" : "❌ সিঙ্ক এরর";
         } else {
           if (!syncEngine.hasEndpoint()) {
-            syncMsgRef.current.textContent = curLang === "en" ? "⚙️ Set Google Sheet" : "⚙️ গুগল শিট সেট করুন";
+            syncMsgRef.current.textContent = curLang === "en" ? "⚙️ Set Sheet" : "⚙️ শিট সেট";
           } else {
-            syncMsgRef.current.textContent = message || (curLang === "en" ? "Offline Mode" : "অফলাইন মোড");
+            syncMsgRef.current.textContent = message || (curLang === "en" ? "⚡ Offline" : "⚡ অফলাইন");
           }
         }
       }
@@ -906,11 +906,11 @@ export default function ShowroomApp() {
               title={syncEngine.hasEndpoint() ? "গুগল শিট সিঙ্ক স্ট্যাটাস" : "গুগল শিট সেট করুন"}
               onClick={() => setActiveTab("sync")}
             >
-              <span className="inline-block w-2 h-2 rounded-full bg-current"></span>
-              <span ref={syncMsgRef}>
+              <span className="inline-block w-2 h-2 rounded-full bg-current flex-shrink-0"></span>
+              <span ref={syncMsgRef} className="truncate">
                 {syncEngine.hasEndpoint()
-                  ? (uiLang === "en" ? "Offline Mode" : "অফলাইন মোড")
-                  : (uiLang === "en" ? "⚙️ Set Google Sheet" : "⚙️ গুগল শিট সেট করুন")}
+                  ? (uiLang === "en" ? "⚡ Offline" : "⚡ অফলাইন")
+                  : (uiLang === "en" ? "⚙️ Set Sheet" : "⚙️ শিট সেট")}
               </span>
             </div>
 
@@ -1507,7 +1507,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.5.8
+                        v2.5.9
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
