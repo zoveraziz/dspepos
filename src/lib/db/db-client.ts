@@ -497,6 +497,12 @@ class DatabaseManager {
       }
     });
 
+    // Ensure today's date is always included in the ledger so "Today" filter and daily ledger always display today's row
+    const todayStr = this.getTodayDateString();
+    if (!dateMap.has(todayStr)) {
+      dateMap.set(todayStr, { purchase: 0, sale: 0, count: 0 });
+    }
+
     // Sort Dates Ascending to calculate running cumulative stock
     const sortedDates = Array.from(dateMap.keys()).sort();
     let cumulativeStock = 0;

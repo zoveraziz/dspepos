@@ -283,13 +283,26 @@ body {
     padding: 0.2rem 0.5rem;
   }
   .header-actions {
-    justify-content: center;
+    justify-content: flex-start;
     width: 100%;
     overflow-x: auto;
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
     -webkit-overflow-scrolling: touch;
     gap: 0.35rem;
-    padding-bottom: 2px;
+    padding: 0 0.5rem 4px 0.5rem;
+    scroll-behavior: smooth;
+  }
+  .header-actions::-webkit-scrollbar {
+    height: 3px;
+    display: block;
+  }
+  .header-actions::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .header-actions::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 9999px;
   }
   .btn-theme-toggle,
   .btn-header-printer,
@@ -414,6 +427,7 @@ body {
   border-bottom: 1px solid var(--border-color);
   padding: 0 1.25rem 0.65rem 1.25rem;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .tab-nav-inner {
@@ -422,6 +436,7 @@ body {
   width: 100%;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.5rem;
   overflow-x: auto;
   scrollbar-width: auto;
@@ -429,7 +444,7 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1200px) {
   .tab-nav-inner {
     justify-content: center;
   }

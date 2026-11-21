@@ -398,21 +398,22 @@ export default function ShowroomApp() {
     if (!monthlyTableBodyRef.current) return;
     const allRows = rawMonthlySummariesRef.current || [];
 
-    const now = new Date();
+    const todayStr = dbManager.getTodayDateString();
+    const parts = todayStr.split("-");
+    const todayDateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
     const toDateStr = (d: Date) => {
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, "0");
       const day = String(d.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
     };
-    const todayStr = toDateStr(now);
 
     let filtered = allRows.slice();
 
     if (dateFilterPreset === "today") {
       filtered = filtered.filter((r) => r.date === todayStr);
     } else if (dateFilterPreset === "7days") {
-      const sevenDaysAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+      const sevenDaysAgo = new Date(todayDateObj.getTime() - 6 * 24 * 60 * 60 * 1000);
       const startStr = toDateStr(sevenDaysAgo);
       filtered = filtered.filter((r) => r.date >= startStr && r.date <= todayStr);
     } else if (dateFilterPreset === "month") {
@@ -1507,7 +1508,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.5.9
+                        v2.6.0
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
