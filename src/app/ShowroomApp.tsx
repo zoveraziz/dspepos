@@ -999,9 +999,9 @@ export default function ShowroomApp() {
               title="মোড পরিবর্তন করুন (লাইট / ডার্ক)"
             >
               {theme === "dark" ? (
-                <span>☀️ <span className="hidden sm:inline">{t.lightMode}</span></span>
+                <span>☀️ <span className="theme-toggle-text">{t.lightMode}</span></span>
               ) : (
-                <span>🌙 <span className="hidden sm:inline">{t.darkMode}</span></span>
+                <span>🌙 <span className="theme-toggle-text">{t.darkMode}</span></span>
               )}
             </button>
 
@@ -1022,7 +1022,9 @@ export default function ShowroomApp() {
               </button>
 
               {isPrefMenuOpen && (
-                <div className="pref-dropdown-menu">
+                <>
+                  <div className="pref-modal-backdrop" onClick={() => setIsPrefMenuOpen(false)} />
+                  <div className="pref-dropdown-menu">
                   <div className="pref-dropdown-header">
                     <span>⚙️ {uiLang === "en" ? "Display & Device Settings" : "ডিসপ্লে ও ডিভাইস সেটিংস"}</span>
                     <button
@@ -1124,7 +1126,8 @@ export default function ShowroomApp() {
                     </button>
                   </div>
                 </div>
-              )}
+              </>
+            )}
             </div>
 
             {/* Role Switcher: Manager vs Admin */}
@@ -1810,7 +1813,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.7.1
+                        v2.7.2
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
