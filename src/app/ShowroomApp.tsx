@@ -247,16 +247,18 @@ export default function ShowroomApp() {
 
   // Click-outside listener for Preferences dropdown menu
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (prefMenuRef.current && !prefMenuRef.current.contains(e.target as Node)) {
         setIsPrefMenuOpen(false);
       }
     };
     if (isPrefMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
     };
   }, [isPrefMenuOpen]);
 
@@ -1022,9 +1024,7 @@ export default function ShowroomApp() {
               </button>
 
               {isPrefMenuOpen && (
-                <>
-                  <div className="pref-modal-backdrop" onClick={() => setIsPrefMenuOpen(false)} />
-                  <div className="pref-dropdown-menu">
+                <div className="pref-dropdown-menu">
                   <div className="pref-dropdown-header">
                     <span>⚙️ {uiLang === "en" ? "Display & Device Settings" : "ডিসপ্লে ও ডিভাইস সেটিংস"}</span>
                     <button
@@ -1126,8 +1126,7 @@ export default function ShowroomApp() {
                     </button>
                   </div>
                 </div>
-              </>
-            )}
+              )}
             </div>
 
             {/* Role Switcher: Manager vs Admin */}
@@ -1146,7 +1145,7 @@ export default function ShowroomApp() {
               >
                 <span>👤 {uiLang === "en" ? "Manager" : "ম্যানেজার"}</span>
                 <span style={{ fontSize: "10px", padding: "1px 5px", background: "rgba(245,158,11,0.25)", color: "#fbbf24", borderRadius: "4px", marginLeft: "4px", fontWeight: 700 }}>
-                  🔑 {uiLang === "en" ? "Admin" : "অ্যাডমিন"}
+                  🔑<span className="hidden sm:inline"> {uiLang === "en" ? "Admin" : "অ্যাডমিন"}</span>
                 </span>
               </button>
             ) : (
@@ -1159,7 +1158,7 @@ export default function ShowroomApp() {
               >
                 <span>👑 {uiLang === "en" ? "Admin" : "অ্যাডমিন"}</span>
                 <span style={{ fontSize: "10px", padding: "1px 5px", background: "rgba(239,68,68,0.25)", color: "#f87171", borderRadius: "4px", marginLeft: "4px", fontWeight: 700 }}>
-                  🔒 {uiLang === "en" ? "Lock" : "লক"}
+                  🔒<span className="hidden sm:inline"> {uiLang === "en" ? "Lock" : "লক"}</span>
                 </span>
               </button>
             )}
@@ -1813,7 +1812,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.7.2
+                        v2.7.3
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>

@@ -287,7 +287,7 @@ body {
     width: 100%;
     overflow: visible;
     flex-wrap: nowrap;
-    gap: 0.35rem;
+    gap: 0.25rem;
     padding: 0 0.25rem 2px 0.25rem;
   }
   .header-actions::-webkit-scrollbar {
@@ -301,24 +301,24 @@ body {
   }
   .sync-status-pill {
     width: auto;
-    min-width: 78px;
-    max-width: 95px;
-    font-size: 0.72rem;
-    padding: 0.25rem 0.45rem;
-    height: 30px;
-    gap: 0.25rem;
+    min-width: 68px;
+    max-width: 85px;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.35rem;
+    height: 28px;
+    gap: 0.2rem;
   }
   .btn-theme-toggle {
-    font-size: 0.8rem;
-    padding: 0.25rem 0.5rem;
-    height: 30px;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.4rem;
+    height: 28px;
     border-radius: 8px;
   }
   .btn-header-pill {
     font-size: 0.72rem;
-    padding: 0.25rem 0.45rem;
-    height: 30px;
-    gap: 0.25rem;
+    padding: 0.25rem 0.4rem;
+    height: 28px;
+    gap: 0.2rem;
   }
   .monthly-kpi-grid {
     grid-template-columns: 1fr;
@@ -374,47 +374,27 @@ body {
   box-shadow: 0 16px 40px -4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
 }
 
-.pref-modal-backdrop {
-  display: none;
-}
-
 @keyframes dropdownFadeIn {
   from {
     opacity: 0;
-    transform: scale(0.96);
+    transform: translateY(-4px) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 
 @media (max-width: 640px) {
-  .pref-modal-backdrop {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(4px);
-    z-index: 105;
-    animation: backdropFadeIn 150ms ease-out;
-  }
-
-  @keyframes backdropFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
   .pref-dropdown-menu {
-    position: fixed;
-    top: 50%;
-    left: 50%;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: -20px;
     right: auto;
-    transform: translate(-50%, -50%);
-    width: calc(100vw - 36px);
-    max-width: 320px;
+    width: 280px;
+    max-width: calc(100vw - 20px);
     z-index: 110;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95) !important;
+    box-shadow: 0 20px 45px -8px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
   }
 }
 
