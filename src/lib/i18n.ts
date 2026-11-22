@@ -108,6 +108,9 @@ export const translations = {
     printSlipBtn: "স্লিপ",
     customerPrefix: "কাস্টমার",
     noSalesToday: "আজকে এখনও কোনো বিক্রি এন্ট্রি করা হয়নি। উপরে টাকার অঙ্ক লিখে Enter চাপুন।",
+    shareWhatsAppBtn: "হোয়াটসঅ্যাপে পাঠান",
+    emptySalesTitle: "আজকের দিনের শুভ সূচনা করুন! ☀️",
+    emptySalesDesc: "ওপরের বক্সে বিক্রির টাকা লিখে কিবোর্ডের Enter চাপুন বা 'বিক্রি যোগ করুন' চাপুন।",
 
     // Tab 2: Monthly Sheet
     monthlyPurchaseTitle: "মাসের সর্বমোট মাল ক্রয়",
@@ -217,6 +220,9 @@ export const translations = {
     printSlipBtn: "Slip",
     customerPrefix: "Customer",
     noSalesToday: "No sales recorded today yet. Enter amount above and press Enter.",
+    shareWhatsAppBtn: "WhatsApp Share",
+    emptySalesTitle: "Start Today's Sales! ☀️",
+    emptySalesDesc: "Enter the sale amount above and press Enter to record customer sale.",
 
     // Tab 2: Monthly Sheet
     monthlyPurchaseTitle: "Total Monthly Purchases",

@@ -1,6 +1,6 @@
 {
-  "name": "মেসার্স জামান ট্রেডার্স - DSP ePOS",
-  "short_name": "জামান ট্রেডার্স",
+  "name": "ডিজিটাল সার্ভিস পয়েন্ট - DSP ePOS",
+  "short_name": "DSP ePOS",
   "description": "Ultra-fast Offline-First Point of Sale powered by in-browser SQLite and Google Sheets sync",
   "start_url": "/",
   "display": "standalone",

@@ -30,7 +30,7 @@ export default function ShowroomApp() {
   const t = translations[uiLang];
 
   // Store / Showroom Profile (Custom branding for multiple shops)
-  const [shopName, setShopName] = useState<string>("মেসার্স জামান ট্রেডার্স");
+  const [shopName, setShopName] = useState<string>("ডিজিটাল সার্ভিস পয়েন্ট");
   const [shopSubtitle, setShopSubtitle] = useState<string>("DSP ePOS");
   const [shopPhone, setShopPhone] = useState<string>("");
   const [profileSavedMsg, setProfileSavedMsg] = useState<boolean>(false);
@@ -58,6 +58,8 @@ export default function ShowroomApp() {
   const [customFromDate, setCustomFromDate] = useState<string>("");
   const [customToDate, setCustomToDate] = useState<string>("");
   const [ledgerSearch, setLedgerSearch] = useState<string>("");
+
+  const lastAddedSaleIdRef = useRef<string | null>(null);
 
   const dateFilterPresetRef = useRef<"all" | "today" | "7days" | "month" | "custom">("all");
   const customFromDateRef = useRef<string>("");
@@ -130,12 +132,7 @@ export default function ShowroomApp() {
       }
 
       const savedName = localStorage.getItem("dsp_shop_name");
-      if (savedName && savedName !== "ডিজিটাল সার্ভিস পয়েন্ট") {
-        setShopName(savedName);
-      } else {
-        setShopName("মেসার্স জামান ট্রেডার্স");
-        try { localStorage.setItem("dsp_shop_name", "মেসার্স জামান ট্রেডার্স"); } catch {}
-      }
+      if (savedName) setShopName(savedName);
       const savedSub = localStorage.getItem("dsp_shop_subtitle");
       if (savedSub) setShopSubtitle(savedSub);
       const savedPhone = localStorage.getItem("dsp_shop_phone");
@@ -358,8 +355,12 @@ export default function ShowroomApp() {
     if (sales.length === 0) {
       todaySalesTableBodyRef.current.innerHTML = `
         <tr>
-          <td colspan="5" class="text-center py-8 text-slate-400">
-            ${tCur.noSalesToday}
+          <td colspan="5" class="text-center py-10">
+            <div class="empty-state-box">
+              <div class="empty-state-icon">☀️</div>
+              <div class="empty-state-title">${tCur.emptySalesTitle}</div>
+              <p class="empty-state-desc">${tCur.emptySalesDesc}</p>
+            </div>
           </td>
         </tr>
       `;
@@ -373,6 +374,9 @@ export default function ShowroomApp() {
 
     reversed.forEach((s) => {
       const tr = document.createElement("tr");
+      if (s.id === lastAddedSaleIdRef.current) {
+        tr.classList.add("row-just-added");
+      }
       const serialDisplay = formatDigitString(s.serial_no, curDigits);
       const timeDisplay = formatDigitString(s.time, curDigits);
       const custLabel = `${tCur.customerPrefix} #${serialDisplay}`;
@@ -480,8 +484,12 @@ export default function ShowroomApp() {
     if (filtered.length === 0) {
       monthlyTableBodyRef.current.innerHTML = `
         <tr>
-          <td colspan="5" class="text-center py-8 text-slate-400">
-            ${tCur.noLedgerData}
+          <td colspan="5" class="text-center py-10">
+            <div class="empty-state-box">
+              <div class="empty-state-icon">📊</div>
+              <div class="empty-state-title">${tCur.noLedgerData}</div>
+              <p class="empty-state-desc">${curLang === "en" ? "Try selecting 'All Days' filter or a different date range." : "তারিখের ফিল্টারে 'সব দিন' নির্বাচন করুন বা অন্য তারিখ দিয়ে খুঁজুন।"}</p>
+            </div>
           </td>
         </tr>
       `;
@@ -618,8 +626,12 @@ export default function ShowroomApp() {
     if (purchases.length === 0) {
       purchasesTableBodyRef.current.innerHTML = `
         <tr>
-          <td colspan="4" class="text-center py-6 text-slate-400">
-            ${tCur.noPurchasesToday}
+          <td colspan="4" class="text-center py-10">
+            <div class="empty-state-box">
+              <div class="empty-state-icon">📦</div>
+              <div class="empty-state-title">${tCur.noPurchasesToday}</div>
+              <p class="empty-state-desc">${curLang === "en" ? "Enter daily stock purchase above to maintain accurate inventory records." : "দোকানের নতুন মালামাল ক্রয়ের টাকা ও চালান ওপরে এন্ট্রি করুন, এটি স্বয়ংক্রিয়ভাবে স্টক শিটে যুক্ত হবে।"}</p>
+            </div>
           </td>
         </tr>
       `;
@@ -646,6 +658,74 @@ export default function ShowroomApp() {
     purchasesTableBodyRef.current.replaceChildren(fragment);
   };
 
+  // Synthesized Apple / Square style tactile cash register audio & haptic chime
+  const playCashChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      // Crisp two-tone chime (C6 ~ 1046Hz smoothly transitioning into E6 ~ 1318Hz)
+      osc.frequency.setValueAtTime(1046.5, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1318.5, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    } catch {}
+    try {
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate(35);
+      }
+    } catch {}
+  };
+
+  // One-Click WhatsApp Daily Closing Report Generator
+  const handleShareWhatsApp = async () => {
+    try {
+      const todaySales = await dbManager.getTodaySales();
+      const todayPurchases = await dbManager.getTodayPurchases();
+      const totalSale = todaySales.reduce((acc, curr) => acc + curr.amount, 0);
+      const totalPurchase = todayPurchases.reduce((acc, curr) => acc + curr.amount, 0);
+      const netCash = totalSale - totalPurchase;
+      const custCount = todaySales.length;
+
+      const todayStr = dbManager.getTodayDateString();
+      const parts = todayStr.split("-");
+      const formattedDate = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : todayStr;
+
+      const curDigits = digitModeRef.current;
+      const curLang = uiLangRef.current;
+
+      const saleStr = formatCurrency(totalSale, curDigits);
+      const purchStr = formatCurrency(totalPurchase, curDigits);
+      const netStr = formatCurrency(netCash, curDigits);
+      const custStr = formatCustomerCount(custCount, curDigits, curLang);
+
+      const msg = [
+        `📊 *${curLang === "en" ? "Daily Closing Report" : "দৈনিক হিসাব ক্লোজিং রিপোর্ট"}*`,
+        `🏪 *${shopName}* ${shopSubtitle ? `(${shopSubtitle})` : ""}`,
+        `📅 *${curLang === "en" ? "Date" : "তারিখ"}:* ${formattedDate}`,
+        `━━━━━━━━━━━━━━━━━━━━`,
+        `💰 *${curLang === "en" ? "Total Sales" : "আজকের মোট বিক্রি"}:* ${saleStr}`,
+        `📦 *${curLang === "en" ? "Total Purchases" : "আজকের মাল ক্রয়"}:* ${purchStr}`,
+        `👥 *${curLang === "en" ? "Total Customers" : "মোট কাস্টমার"}:* ${custStr}`,
+        `💵 *${curLang === "en" ? "Net Cash Balance" : "আজকের নিট ক্যাশ"}:* ${netStr}`,
+        `━━━━━━━━━━━━━━━━━━━━`,
+        `✅ *${shopName} ePOS System*`,
+      ].join("\n");
+
+      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+      window.open(waUrl, "_blank");
+    } catch (e: any) {
+      alert("হোয়াটসঅ্যাপে শেয়ার করতে সমস্যা হয়েছে: " + e.message);
+    }
+  };
+
   // Handle Quick Sale Entry (Manager types amount & hits Enter)
   const handleQuickSaleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -659,11 +739,19 @@ export default function ShowroomApp() {
 
     try {
       const record = await dbManager.addSale(val, userRoleRef.current === "admin" ? "অ্যাডমিন" : "ম্যানেজার");
+      lastAddedSaleIdRef.current = record.id;
+      playCashChime();
 
       saleAmountInputRef.current.value = "";
       saleAmountInputRef.current.focus();
 
       await refreshAllData();
+
+      setTimeout(() => {
+        if (lastAddedSaleIdRef.current === record.id) {
+          lastAddedSaleIdRef.current = null;
+        }
+      }, 2000);
 
       if (autoPrintCheckboxRef.current?.checked) {
         await printBridge.printSlip(record, { shopName, subtitle: shopSubtitle, phone: shopPhone });
@@ -766,7 +854,7 @@ export default function ShowroomApp() {
   const handleSaveShopProfile = (e?: React.MouseEvent | React.FormEvent) => {
     if (e) e.preventDefault();
     if (shopNameInputRef.current) {
-      const name = shopNameInputRef.current.value.trim() || "মেসার্স জামান ট্রেডার্স";
+      const name = shopNameInputRef.current.value.trim() || "ডিজিটাল সার্ভিস পয়েন্ট";
       setShopName(name);
       localStorage.setItem("dsp_shop_name", name);
     }
@@ -801,7 +889,7 @@ export default function ShowroomApp() {
       syncEngine.setEndpointUrl(url);
     }
     if (shopNameInputRef.current) {
-      const name = shopNameInputRef.current.value.trim() || "মেসার্স জামান ট্রেডার্স";
+      const name = shopNameInputRef.current.value.trim() || "ডিজিটাল সার্ভিস পয়েন্ট";
       setShopName(name);
       localStorage.setItem("dsp_shop_name", name);
     }
@@ -1112,11 +1200,21 @@ export default function ShowroomApp() {
                   <h2 className="table-title">{t.tableSalesTitle}</h2>
                   <p className="table-subtitle">{t.tableSalesSubtitle}</p>
                 </div>
-                <div className="table-header-total">
-                  <span className="table-header-total-label">{t.tableGrandTotalLabel}</span>
-                  <span ref={tableTotalSaleRef} className="table-header-total-amount">
-                    {formatCurrency(0, digitMode)}
-                  </span>
+                <div className="table-header-right">
+                  <button
+                    type="button"
+                    onClick={handleShareWhatsApp}
+                    className="btn-share-whatsapp cursor-pointer"
+                    title={uiLang === "en" ? "Share today's closing summary to WhatsApp" : "আজকের দিনের মোট হিসাব হোয়াটসঅ্যাপে পাঠান"}
+                  >
+                    <span>📲</span> <span>{t.shareWhatsAppBtn}</span>
+                  </button>
+                  <div className="table-header-total">
+                    <span className="table-header-total-label">{t.tableGrandTotalLabel}</span>
+                    <span ref={tableTotalSaleRef} className="table-header-total-amount">
+                      {formatCurrency(0, digitMode)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1406,7 +1504,7 @@ export default function ShowroomApp() {
                         ref={shopNameInputRef}
                         type="text"
                         defaultValue={shopName}
-                        placeholder={uiLang === "en" ? "e.g. M/S Zaman Traders" : "যেমন: মেসার্স জামান ট্রেডার্স"}
+                        placeholder={uiLang === "en" ? "e.g. Badsha Sweets" : "যেমন: বাদশাহ এন্টারপ্রাইজ"}
                         className="sync-input-field"
                       />
                     </div>
@@ -1590,7 +1688,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.6.3
+                        v2.7.0
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
