@@ -34,6 +34,9 @@ export default function ShowroomApp() {
   const [shopSubtitle, setShopSubtitle] = useState<string>("DSP ePOS");
   const [shopPhone, setShopPhone] = useState<string>("");
   const [profileSavedMsg, setProfileSavedMsg] = useState<boolean>(false);
+  const [isPrefMenuOpen, setIsPrefMenuOpen] = useState<boolean>(false);
+  const [isPrinterConnected, setIsPrinterConnected] = useState<boolean>(false);
+  const prefMenuRef = useRef<HTMLDivElement>(null);
   const shopNameInputRef = useRef<HTMLInputElement>(null);
   const shopSubtitleInputRef = useRef<HTMLInputElement>(null);
   const shopPhoneInputRef = useRef<HTMLInputElement>(null);
@@ -241,6 +244,21 @@ export default function ShowroomApp() {
     refreshAllData();
     applyMonthlyFilterAndRender();
   }, [digitMode, uiLang]);
+
+  // Click-outside listener for Preferences dropdown menu
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (prefMenuRef.current && !prefMenuRef.current.contains(e.target as Node)) {
+        setIsPrefMenuOpen(false);
+      }
+    };
+    if (isPrefMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isPrefMenuOpen]);
 
   useEffect(() => {
     // Unregister stale service workers in dev
@@ -841,12 +859,14 @@ export default function ShowroomApp() {
 
   const handleConnectPrinter = async () => {
     const ok = await printBridge.connectHardwarePrinter();
+    setIsPrinterConnected(ok);
     if (printerBtnRef.current) {
       if (ok) {
         printerBtnRef.current.textContent = "🟢 প্রিন্টার সংযুক্ত";
         printerBtnRef.current.style.borderColor = "#10b981";
       } else {
         printerBtnRef.current.textContent = "🔌 থার্মাল প্রিন্টার যুক্ত করুন";
+        printerBtnRef.current.style.borderColor = "";
       }
     }
   };
@@ -985,25 +1005,127 @@ export default function ShowroomApp() {
               )}
             </button>
 
-            {/* Digit Language Toggle: 123 (English) vs ১২৩ (Bengali) */}
-            <button
-              type="button"
-              onClick={toggleDigitMode}
-              className="btn-header-pill cursor-pointer"
-              title={t.digitToggleTitle}
-            >
-              <span>🔢 {digitMode === "en" ? "123" : "১২৩"}</span>
-            </button>
+            {/* Preferences Dropdown: Language, Numbers & Device Settings */}
+            <div ref={prefMenuRef} className="pref-dropdown-container">
+              <button
+                type="button"
+                onClick={() => setIsPrefMenuOpen(!isPrefMenuOpen)}
+                className="btn-header-pill cursor-pointer"
+                style={{
+                  borderColor: isPrefMenuOpen ? "#3b82f6" : undefined,
+                  background: isPrefMenuOpen ? "rgba(59, 130, 246, 0.15)" : undefined,
+                  color: isPrefMenuOpen ? "#60a5fa" : undefined,
+                }}
+                title={uiLang === "en" ? "Language, Numbers & Device Settings" : "ভাষা, সংখ্যা ও ডিভাইস সেটিংস"}
+              >
+                <span>🌐 {uiLang === "bn" ? "বাং" : "EN"} ({digitMode === "en" ? "123" : "১২৩"}) ▾</span>
+              </button>
 
-            {/* UI Language Toggle: বাংলা vs English */}
-            <button
-              type="button"
-              onClick={toggleUiLang}
-              className="btn-header-pill cursor-pointer"
-              title={t.langToggleTitle}
-            >
-              <span>🌐 {uiLang === "bn" ? "বাং" : "EN"}</span>
-            </button>
+              {isPrefMenuOpen && (
+                <div className="pref-dropdown-menu">
+                  <div className="pref-dropdown-header">
+                    <span>⚙️ {uiLang === "en" ? "Display & Device Settings" : "ডিসপ্লে ও ডিভাইস সেটিংস"}</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsPrefMenuOpen(false)}
+                      className="pref-close-btn"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* UI Language */}
+                  <div className="pref-item">
+                    <span className="pref-item-label">🌐 {uiLang === "en" ? "App Language" : "অ্যাপের ভাষা"}</span>
+                    <div className="pref-pill-group">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUiLang("bn");
+                          try {
+                            localStorage.setItem("dsp_ui_lang", "bn");
+                          } catch {}
+                          uiLangRef.current = "bn";
+                          setIsPrefMenuOpen(false);
+                        }}
+                        className={`pref-pill-option ${uiLang === "bn" ? "active" : ""}`}
+                      >
+                        বাংলা
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUiLang("en");
+                          try {
+                            localStorage.setItem("dsp_ui_lang", "en");
+                          } catch {}
+                          uiLangRef.current = "en";
+                          setIsPrefMenuOpen(false);
+                        }}
+                        className={`pref-pill-option ${uiLang === "en" ? "active" : ""}`}
+                      >
+                        English
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Digit Mode */}
+                  <div className="pref-item">
+                    <span className="pref-item-label">🔢 {uiLang === "en" ? "Number Format" : "সংখ্যার ফরম্যাট"}</span>
+                    <div className="pref-pill-group">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDigitMode("bn");
+                          try {
+                            localStorage.setItem("dsp_digit_mode", "bn");
+                          } catch {}
+                          digitModeRef.current = "bn";
+                          setIsPrefMenuOpen(false);
+                        }}
+                        className={`pref-pill-option ${digitMode === "bn" ? "active" : ""}`}
+                      >
+                        ১২৩৪৫ (বাংলা)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDigitMode("en");
+                          try {
+                            localStorage.setItem("dsp_digit_mode", "en");
+                          } catch {}
+                          digitModeRef.current = "en";
+                          setIsPrefMenuOpen(false);
+                        }}
+                        className={`pref-pill-option ${digitMode === "en" ? "active" : ""}`}
+                      >
+                        12345 (English)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Hardware Printer */}
+                  <div className="pref-item" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "0.5rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleConnectPrinter();
+                        setIsPrefMenuOpen(false);
+                      }}
+                      className="pref-printer-btn"
+                      style={isPrinterConnected ? { borderColor: "#10b981", color: "#34d399", background: "rgba(16,185,129,0.15)" } : undefined}
+                    >
+                      <span>{isPrinterConnected ? "🟢" : "🔌"}</span>
+                      <span>
+                        {isPrinterConnected
+                          ? (uiLang === "en" ? "Printer Connected" : "প্রিন্টার সংযুক্ত আছে")
+                          : (uiLang === "en" ? "Connect Hardware Printer" : "ক্যাশ কাউন্টারে প্রিন্টার যুক্ত করুন")}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Role Switcher: Manager vs Admin */}
             {userRole === "manager" ? (
@@ -1688,7 +1810,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.7.0
+                        v2.7.1
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
