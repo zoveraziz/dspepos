@@ -862,15 +862,6 @@ export default function ShowroomApp() {
   const handleConnectPrinter = async () => {
     const ok = await printBridge.connectHardwarePrinter();
     setIsPrinterConnected(ok);
-    if (printerBtnRef.current) {
-      if (ok) {
-        printerBtnRef.current.textContent = "🟢 প্রিন্টার সংযুক্ত";
-        printerBtnRef.current.style.borderColor = "#10b981";
-      } else {
-        printerBtnRef.current.textContent = "🔌 থার্মাল প্রিন্টার যুক্ত করুন";
-        printerBtnRef.current.style.borderColor = "";
-      }
-    }
   };
 
   const handleSaveShopProfile = (e?: React.MouseEvent | React.FormEvent) => {
@@ -1177,16 +1168,6 @@ export default function ShowroomApp() {
                   : (uiLang === "en" ? "⚙️ Set Sheet" : "⚙️ শিট সেট")}
               </span>
             </div>
-
-            <button
-              ref={printerBtnRef}
-              type="button"
-              onClick={handleConnectPrinter}
-              className="btn-header-printer cursor-pointer"
-              title={uiLang === "en" ? "Connect Hardware Thermal Printer" : "ক্যাশ কাউন্টারের থার্মাল প্রিন্টার যুক্ত করুন"}
-            >
-              <span>🔌 <span className="hidden sm:inline">{uiLang === "en" ? "Thermal " : "থার্মাল "}</span>{uiLang === "en" ? "Printer" : "প্রিন্টার"}</span>
-            </button>
           </div>
         </div>
       </header>
@@ -1812,7 +1793,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.7.3
+                        v2.7.4
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
