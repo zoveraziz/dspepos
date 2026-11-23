@@ -1135,7 +1135,7 @@ export default function ShowroomApp() {
                 title={uiLang === "en" ? "Manager Mode Active (Click to unlock Admin)" : "ম্যানেজার মোড সক্রিয় (ক্লিক করে অ্যাডমিন মোডে যান)"}
               >
                 <span>👤 {uiLang === "en" ? "Manager" : "ম্যানেজার"}</span>
-                <span style={{ fontSize: "10px", padding: "1px 5px", background: "rgba(245,158,11,0.25)", color: "#fbbf24", borderRadius: "4px", marginLeft: "4px", fontWeight: 700 }}>
+                <span style={{ fontSize: "11px", padding: "2px 6px", background: "rgba(245,158,11,0.25)", color: "#fbbf24", borderRadius: "5px", marginLeft: "4px", fontWeight: 700 }}>
                   🔑<span className="hidden sm:inline"> {uiLang === "en" ? "Admin" : "অ্যাডমিন"}</span>
                 </span>
               </button>
@@ -1148,7 +1148,7 @@ export default function ShowroomApp() {
                 title={uiLang === "en" ? "Admin Mode Active (Click to lock to Manager)" : "অ্যাডমিন মোড সক্রিয় (ক্লিক করে ম্যানেজার মোডে ফিরুন)"}
               >
                 <span>👑 {uiLang === "en" ? "Admin" : "অ্যাডমিন"}</span>
-                <span style={{ fontSize: "10px", padding: "1px 5px", background: "rgba(239,68,68,0.25)", color: "#f87171", borderRadius: "4px", marginLeft: "4px", fontWeight: 700 }}>
+                <span style={{ fontSize: "11px", padding: "2px 6px", background: "rgba(239,68,68,0.25)", color: "#f87171", borderRadius: "5px", marginLeft: "4px", fontWeight: 700 }}>
                   🔒<span className="hidden sm:inline"> {uiLang === "en" ? "Lock" : "লক"}</span>
                 </span>
               </button>
@@ -1793,7 +1793,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.7.4
+                        v2.7.5
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
