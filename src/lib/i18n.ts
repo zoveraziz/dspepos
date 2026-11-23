@@ -179,6 +179,19 @@ export const translations = {
     syncCard4Badge: "বিপদজনক অঞ্চল",
     syncCard4Desc: "টেস্টিংয়ের সময় যোগ করা সমস্ত বিক্রি ও ক্রয়ের হিসাব গুগল শিট এবং লোকাল ডাটাবেজ থেকে মুছে কাস্টমার সিরিয়াল ও স্টক হিসাব একদম #১ থেকে ফ্রেশ শুরু করতে নিচের বাটনে চাপ দিন।",
     resetBtn: "⚠️ সমস্ত ডাটা মুছে নতুন করে শুরু করুন",
+
+    // Trial & License
+    trialBadge: "১৫ দিনের ফ্রি ট্রায়াল",
+    trialBadgeShort: "ফ্রি ট্রায়াল",
+    trialBadgeActive: "১৫ দিনের ট্রায়াল মোড সক্রিয়",
+    trialCardTitle: "সফটওয়্যার লাইসেন্স ও ১৫ দিনের ফ্রি ট্রায়াল",
+    trialCardDesc: "আপনি বর্তমানে পূর্ণাঙ্গ ফিচারের ১৫ দিনের ফ্রি ট্রায়াল ব্যবহার করছেন। কোনো প্রকার চার্জ ছাড়াই ক্যাশ কাউন্টার, মেমো প্রিন্টিং, বাকি খাতা ও গুগল শিট ব্যাকআপ পরখ করে দেখুন। সন্তুষ্ট হলে লাইসেন্স ক্রয় করতে পারেন।",
+    trialFeature1: "ফুল অফলাইন পিওএস ও হাই-স্পিড লোকাল ডাটাবেজ",
+    trialFeature2: "৫৮মিমি/৮০মিমি বাংলা থার্মাল রিসিট প্রিন্ট",
+    trialFeature3: "গুগল শিটে ২-মুখী লাইভ ক্লাউড ব্যাকআপ",
+    trialFeature4: "মাসিক লাভ-ক্ষতি ও পাইকারি মাল ক্রয় খাতা",
+    trialContactLabel: "সফটওয়্যার কিনতে চান বা ট্রায়াল সহায়তা প্রয়োজন?",
+    trialBuyBtn: "লাইসেন্স নিতে যোগাযোগ করুন",
   },
   en: {
     // Header
@@ -295,5 +308,18 @@ export const translations = {
     syncCard4Badge: "Danger Zone",
     syncCard4Desc: "Wipe all test sales and purchases from Google Sheets and local storage to start serial numbers and stock from #1.",
     resetBtn: "⚠️ Wipe All Data & Start Fresh",
+
+    // Trial & License
+    trialBadge: "15-Day Free Trial",
+    trialBadgeShort: "Free Trial",
+    trialBadgeActive: "15-Day Trial Mode Active",
+    trialCardTitle: "Software License & 15-Day Free Trial",
+    trialCardDesc: "You are currently running the full-featured 15-Day Free Trial. Test live billing, cash counter, sales history, multi-showroom support, and Google Sheets sync risk-free before purchasing.",
+    trialFeature1: "Full offline POS & High-speed Local DB",
+    trialFeature2: "58mm/80mm Bengali Thermal Receipt Print",
+    trialFeature3: "Google Sheets 2-way live cloud backup",
+    trialFeature4: "Monthly profit/loss & stock purchase ledger",
+    trialContactLabel: "Interested in purchasing or need trial support?",
+    trialBuyBtn: "Inquire to Purchase",
   }
 };

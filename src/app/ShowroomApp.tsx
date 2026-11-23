@@ -982,6 +982,14 @@ export default function ShowroomApp() {
             <span className="brand-badge">DSP</span>
             <h1 className="text-xl font-bold tracking-tight text-white">{shopName}</h1>
             <span className="text-xs text-amber-300 font-semibold desktop-only">{shopSubtitle}</span>
+            <button
+              type="button"
+              onClick={() => handleTabClick("sync")}
+              className="trial-header-badge cursor-pointer"
+              title={uiLang === "en" ? "15-Day Free Trial Active. Click for license info" : "১৫ দিনের ফ্রি ট্রায়াল সক্রিয়। লাইসেন্স বিস্তারিত দেখতে ক্লিক করুন"}
+            >
+              <span>🎁</span> <span><span className="desktop-only">{uiLang === "en" ? "15-Day " : "১৫ দিনের "}</span>{t.trialBadgeShort}</span>
+            </button>
           </div>
 
           <div className="header-actions">
@@ -1025,6 +1033,19 @@ export default function ShowroomApp() {
                     >
                       ✕
                     </button>
+                  </div>
+
+                  {/* 15-Day Trial Status inside Dropdown */}
+                  <div className="pref-trial-box">
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "3px" }}>
+                      <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#fbbf24" }}>🎁 {uiLang === "en" ? "Software License" : "সফটওয়্যার লাইসেন্স"}</span>
+                      <span className="pref-trial-badge" style={{ fontSize: "0.68rem", fontWeight: 700, background: "rgba(245, 158, 11, 0.25)", color: "#fbbf24", padding: "1px 6px", borderRadius: "9999px", border: "1px solid rgba(245, 158, 11, 0.4)" }}>
+                        {uiLang === "en" ? "15-Day Trial" : "১৫ দিনের ট্রায়াল"}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.35 }}>
+                      {uiLang === "en" ? "Full access unlocked. Test all features risk-free." : "সব ফিচার আনলক করা। ১৫ দিন সম্পূর্ণ ফ্রিতে পরখ করে দেখুন।"}
+                    </div>
                   </div>
 
                   {/* UI Language */}
@@ -1577,6 +1598,73 @@ export default function ShowroomApp() {
         {/* TAB 4: GOOGLE SHEETS SYNC SETTINGS */}
         {activeTab === "sync" && (
           <div className="sync-page-container">
+            {/* CARD 0: 15-DAY FREE TRIAL & SOFTWARE LICENSE */}
+            <div className="sync-card sync-card-trial">
+              <div className="sync-card-header">
+                <div className="sync-header-left">
+                  <div className="sync-card-icon sync-card-icon-amber">
+                    🎁
+                  </div>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                      <h2 className="sync-card-title">
+                        {t.trialCardTitle}
+                      </h2>
+                      <span className="sync-badge sync-badge-amber">
+                        {t.trialBadgeActive}
+                      </span>
+                    </div>
+                    <p className="sync-card-desc">
+                      {t.trialCardDesc}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="trial-features-grid">
+                <div className="trial-feature-item">
+                  <span className="trial-check">✓</span>
+                  <span>{t.trialFeature1}</span>
+                </div>
+                <div className="trial-feature-item">
+                  <span className="trial-check">✓</span>
+                  <span>{t.trialFeature2}</span>
+                </div>
+                <div className="trial-feature-item">
+                  <span className="trial-check">✓</span>
+                  <span>{t.trialFeature3}</span>
+                </div>
+                <div className="trial-feature-item">
+                  <span className="trial-check">✓</span>
+                  <span>{t.trialFeature4}</span>
+                </div>
+              </div>
+
+              <div className="trial-action-bar">
+                <div className="trial-contact-info">
+                  <span className="trial-contact-label">{t.trialContactLabel}</span>
+                  <span className="trial-contact-detail">
+                    {uiLang === "en"
+                      ? "Contact the author to get your permanent license key or multi-shop setup."
+                      : "স্থায়ী লাইসেন্স সংগ্রহ করতে বা একাধিক শাখার জন্য আলাদা সেটআপ পেতে যোগাযোগ করুন।"}
+                  </span>
+                </div>
+                <a
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                    uiLang === "en"
+                      ? "Hello, I am using the DSP ePOS 15-day free trial and would like to inquire about purchasing the full license."
+                      : "আসসালামু আলাইকুম, আমি DSP ePOS সফটওয়্যারটির ১৫ দিনের ট্রায়াল ব্যবহার করেছি। আমি পূর্ণাঙ্গ লাইসেন্স কিনতে আগ্রহী।"
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-trial-buy cursor-pointer"
+                  title={uiLang === "en" ? "Contact on WhatsApp to purchase license" : "লাইসেন্স কিনতে হোয়াটসঅ্যাপে যোগাযোগ করুন"}
+                >
+                  <span>💬</span> <span>{t.trialBuyBtn}</span>
+                </a>
+              </div>
+            </div>
+
             {/* CARD 1: Google Sheets 2-Way Live Sync Config */}
             <div className="sync-card sync-card-emerald">
               <div className="sync-card-header">
@@ -1804,7 +1892,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.7.7
+                        v2.7.8
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
