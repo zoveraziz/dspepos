@@ -89,6 +89,10 @@ export const translations = {
     tabMonthly: "মাসের হিসাব ও স্টক শিট (গুগল শিট ফরম্যাট)",
     tabPurchase: "মাল ক্রয় এন্ট্রি (মালিকের ডেস্ক)",
     tabSync: "গুগল শিট সিঙ্ক",
+    tabCounterShort: "কাউন্টার",
+    tabMonthlyShort: "মাসিক হিসাব",
+    tabPurchaseShort: "মাল ক্রয়",
+    tabSyncShort: "শিট সিঙ্ক",
 
     // Tab 1: Sales Counter
     counterCardTitle: "ক্যাশ কাউন্টার - দ্রুত বিক্রি এন্ট্রি",
@@ -201,6 +205,10 @@ export const translations = {
     tabMonthly: "Monthly Ledger & Stock Sheet",
     tabPurchase: "Purchase Entry (Owner Desk)",
     tabSync: "Google Sheets Sync",
+    tabCounterShort: "Counter",
+    tabMonthlyShort: "Monthly",
+    tabPurchaseShort: "Purchase",
+    tabSyncShort: "Sync",
 
     // Tab 1: Sales Counter
     counterCardTitle: "Cash Counter - Quick Sale Entry",
