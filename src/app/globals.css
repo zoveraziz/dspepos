@@ -68,6 +68,30 @@ body {
 }
 
 /* =========================================================================
+   0. BULLETPROOF RESPONSIVE UTILITIES (NO TAILWIND COMPILER DEPENDENCY)
+   ========================================================================= */
+.desktop-only,
+span.desktop-only {
+  display: none !important;
+}
+
+.mobile-only,
+span.mobile-only {
+  display: inline !important;
+}
+
+@media (min-width: 768px) {
+  .desktop-only,
+  span.desktop-only {
+    display: inline !important;
+  }
+  .mobile-only,
+  span.mobile-only {
+    display: none !important;
+  }
+}
+
+/* =========================================================================
    1. APP HEADER
    ========================================================================= */
 .app-header {
@@ -703,17 +727,19 @@ body {
   }
   .tab-nav-inner {
     display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
+    grid-template-columns: 1fr 1fr 1fr 1fr !important;
     gap: 0.25rem !important;
     width: 100% !important;
     max-width: 100% !important;
-    overflow-x: hidden !important;
+    overflow: hidden !important;
     padding: 0 !important;
     box-sizing: border-box !important;
   }
   .tab-btn {
+    min-width: 0 !important;
+    overflow: hidden !important;
     padding: 0.45rem 0.15rem !important;
-    font-size: 0.74rem !important;
+    font-size: 0.72rem !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
@@ -726,6 +752,12 @@ body {
     border-bottom: none !important;
     background: rgba(0, 0, 0, 0.25) !important;
     box-sizing: border-box !important;
+  }
+  .tab-btn span {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
   }
   [data-theme="light"] .tab-btn {
     background: #f1f5f9 !important;
@@ -743,7 +775,7 @@ body {
     color: #b45309 !important;
   }
   .tab-icon {
-    font-size: 1.1rem !important;
+    font-size: 1.15rem !important;
     line-height: 1 !important;
   }
 }

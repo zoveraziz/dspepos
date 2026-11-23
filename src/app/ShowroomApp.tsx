@@ -981,7 +981,7 @@ export default function ShowroomApp() {
           <div className="header-brand">
             <span className="brand-badge">DSP</span>
             <h1 className="text-xl font-bold tracking-tight text-white">{shopName}</h1>
-            <span className="text-xs text-amber-300 font-semibold hidden sm:inline">{shopSubtitle}</span>
+            <span className="text-xs text-amber-300 font-semibold desktop-only">{shopSubtitle}</span>
           </div>
 
           <div className="header-actions">
@@ -1011,7 +1011,7 @@ export default function ShowroomApp() {
                 }}
                 title={uiLang === "en" ? "Language, Numbers & Device Settings" : "ভাষা, সংখ্যা ও ডিভাইস সেটিংস"}
               >
-                <span>🌐 {uiLang === "bn" ? "বাং" : "EN"}<span className="hidden sm:inline"> ({digitMode === "en" ? "123" : "১২৩"})</span> ▾</span>
+                <span>🌐 {uiLang === "bn" ? "বাং" : "EN"}<span className="desktop-only"> ({digitMode === "en" ? "123" : "১২৩"})</span> ▾</span>
               </button>
 
               {isPrefMenuOpen && (
@@ -1134,9 +1134,9 @@ export default function ShowroomApp() {
                 style={{ borderColor: "#64748b", color: "#e2e8f0" }}
                 title={uiLang === "en" ? "Manager Mode Active (Click to unlock Admin)" : "ম্যানেজার মোড সক্রিয় (ক্লিক করে অ্যাডমিন মোডে যান)"}
               >
-                <span>👤<span className="hidden sm:inline"> {uiLang === "en" ? "Manager" : "ম্যানেজার"}</span></span>
+                <span>👤<span className="desktop-only"> {uiLang === "en" ? "Manager" : "ম্যানেজার"}</span></span>
                 <span style={{ fontSize: "11px", padding: "2px 5px", background: "rgba(245,158,11,0.25)", color: "#fbbf24", borderRadius: "5px", marginLeft: "2px", fontWeight: 700 }}>
-                  🔑<span className="hidden sm:inline"> {uiLang === "en" ? "Admin" : "অ্যাডমিন"}</span>
+                  🔑<span className="desktop-only"> {uiLang === "en" ? "Admin" : "অ্যাডমিন"}</span>
                 </span>
               </button>
             ) : (
@@ -1147,9 +1147,9 @@ export default function ShowroomApp() {
                 style={{ borderColor: "#10b981", color: "#34d399", background: "rgba(16,185,129,0.15)" }}
                 title={uiLang === "en" ? "Admin Mode Active (Click to lock to Manager)" : "অ্যাডমিন মোড সক্রিয় (ক্লিক করে ম্যানেজার মোডে ফিরুন)"}
               >
-                <span>👑<span className="hidden sm:inline"> {uiLang === "en" ? "Admin" : "অ্যাডমিন"}</span></span>
+                <span>👑<span className="desktop-only"> {uiLang === "en" ? "Admin" : "অ্যাডমিন"}</span></span>
                 <span style={{ fontSize: "11px", padding: "2px 5px", background: "rgba(239,68,68,0.25)", color: "#f87171", borderRadius: "5px", marginLeft: "2px", fontWeight: 700 }}>
-                  🔒<span className="hidden sm:inline"> {uiLang === "en" ? "Lock" : "লক"}</span>
+                  🔒<span className="desktop-only"> {uiLang === "en" ? "Lock" : "লক"}</span>
                 </span>
               </button>
             )}
@@ -1214,8 +1214,8 @@ export default function ShowroomApp() {
             className={`tab-btn ${activeTab === "counter" ? "tab-btn-active" : ""}`}
           >
             <span className="tab-icon">⚡</span>
-            <span className="hidden md:inline">{t.tabCounter}</span>
-            <span className="md:hidden">{t.tabCounterShort}</span>
+            <span className="desktop-only">{t.tabCounter}</span>
+            <span className="mobile-only">{t.tabCounterShort}</span>
           </button>
           <button
             type="button"
@@ -1224,8 +1224,8 @@ export default function ShowroomApp() {
             title={userRole === "manager" ? "লক করা (অ্যাডমিন পিন প্রয়োজন)" : ""}
           >
             <span className="tab-icon">📊</span>
-            <span className="hidden md:inline">{t.tabMonthly}</span>
-            <span className="md:hidden">{t.tabMonthlyShort}</span>
+            <span className="desktop-only">{t.tabMonthly}</span>
+            <span className="mobile-only">{t.tabMonthlyShort}</span>
             {userRole === "manager" && <span className="tab-lock-icon">🔒</span>}
           </button>
           <button
@@ -1235,8 +1235,8 @@ export default function ShowroomApp() {
             title={userRole === "manager" ? "লক করা (অ্যাডমিন পিন প্রয়োজন)" : ""}
           >
             <span className="tab-icon">📦</span>
-            <span className="hidden md:inline">{t.tabPurchase}</span>
-            <span className="md:hidden">{t.tabPurchaseShort}</span>
+            <span className="desktop-only">{t.tabPurchase}</span>
+            <span className="mobile-only">{t.tabPurchaseShort}</span>
             {userRole === "manager" && <span className="tab-lock-icon">🔒</span>}
           </button>
           <button
@@ -1246,8 +1246,8 @@ export default function ShowroomApp() {
             title={userRole === "manager" ? "লক করা (অ্যাডমিন পিন প্রয়োজন)" : ""}
           >
             <span className="tab-icon">⚙️</span>
-            <span className="hidden md:inline">{t.tabSync}</span>
-            <span className="md:hidden">{t.tabSyncShort}</span>
+            <span className="desktop-only">{t.tabSync}</span>
+            <span className="mobile-only">{t.tabSyncShort}</span>
             {userRole === "manager" && <span className="tab-lock-icon">🔒</span>}
           </button>
         </div>
@@ -1804,7 +1804,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.7.6
+                        v2.7.7
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
