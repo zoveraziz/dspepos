@@ -56,6 +56,10 @@ export default function ShowroomApp() {
   const [activeTab, setActiveTab] = useState<"counter" | "monthly" | "purchase" | "sync">("counter");
   const [gasCopied, setGasCopied] = useState(false);
 
+  // Dynamic Hostname & Domain Detection (Adapts automatically when custom domain is connected)
+  const [currentOrigin, setCurrentOrigin] = useState("https://dspepos.vercel.app");
+  const [currentHostname, setCurrentHostname] = useState("dspepos.vercel.app");
+
   // Tab 2: Monthly Ledger Filters & Search State
   const [dateFilterPreset, setDateFilterPreset] = useState<"all" | "today" | "7days" | "month" | "custom">("all");
   const [customFromDate, setCustomFromDate] = useState<string>("");
@@ -149,6 +153,12 @@ export default function ShowroomApp() {
       const savedPin = localStorage.getItem("dsp_admin_pin");
       if (savedPin) {
         setAdminPin(savedPin);
+      }
+
+      // Dynamic domain/host detection for custom domain support
+      if (typeof window !== "undefined") {
+        setCurrentOrigin(window.location.origin);
+        setCurrentHostname(window.location.host);
       }
 
       // Persistent Storage lock for zero-data-loss offline safety
@@ -1645,20 +1655,34 @@ export default function ShowroomApp() {
                   <span className="trial-contact-label">{t.trialContactLabel}</span>
                   <span className="trial-contact-detail">
                     {uiLang === "en"
-                      ? "Contact the author to get your permanent license key or multi-shop setup."
-                      : "স্থায়ী লাইসেন্স সংগ্রহ করতে বা একাধিক শাখার জন্য আলাদা সেটআপ পেতে যোগাযোগ করুন।"}
+                      ? "A proud product of Digital Service Point (DSP). Contact for licensing, custom domain, and technical support."
+                      : "ডিজিটাল সার্ভিস পয়েন্ট (DSP)-এর একটি প্রোডাক্ট। লাইসেন্সিং, ডোমেইন কানেক্ট ও সহায়তার জন্য যোগাযোগ করুন।"}
                   </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap", marginTop: "4px" }}>
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                      🌐 {uiLang === "en" ? "Website:" : "ওয়েবসাইট:"}
+                    </span>
+                    <a
+                      href={currentOrigin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: "0.76rem", color: "#60a5fa", fontWeight: 700, textDecoration: "underline" }}
+                      title={uiLang === "en" ? "Visit Official Website" : "অফিশিয়াল ওয়েবসাইট ভিজিট করুন"}
+                    >
+                      {currentHostname}
+                    </a>
+                  </div>
                 </div>
                 <a
                   href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
                     uiLang === "en"
-                      ? "Hello, I am using the DSP ePOS 15-day free trial and would like to inquire about purchasing the full license."
-                      : "আসসালামু আলাইকুম, আমি DSP ePOS সফটওয়্যারটির ১৫ দিনের ট্রায়াল ব্যবহার করেছি। আমি পূর্ণাঙ্গ লাইসেন্স কিনতে আগ্রহী।"
+                      ? "Hello Digital Service Point, I am using DSP ePOS and would like to inquire about full license & support."
+                      : "আসসালামু আলাইকুম ডিজিটাল সার্ভিস পয়েন্ট, আমি DSP ePOS সফটওয়্যারটির লাইসেন্স ও সহায়তা সংক্রান্ত বিষয়ে যোগাযোগ করছি।"
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-trial-buy cursor-pointer"
-                  title={uiLang === "en" ? "Contact on WhatsApp to purchase license" : "লাইসেন্স কিনতে হোয়াটসঅ্যাপে যোগাযোগ করুন"}
+                  title={uiLang === "en" ? "Contact Digital Service Point on WhatsApp" : "ডিজিটাল সার্ভিস পয়েন্টের সাথে হোয়াটসঅ্যাপে যোগাযোগ করুন"}
                 >
                   <span>💬</span> <span>{t.trialBuyBtn}</span>
                 </a>
@@ -1892,7 +1916,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.7.9
+                        v2.8.0
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
@@ -1945,6 +1969,49 @@ export default function ShowroomApp() {
           </div>
         )}
       </main>
+
+      {/* GLOBAL FOOTER (Proprietor & Support by Digital Service Point) */}
+      <footer className="app-footer">
+        <div className="footer-inner">
+          <div className="footer-brand">
+            <span className="brand-badge">DSP</span>
+            <div>
+              <p className="footer-title">
+                {t.proprietorTitle}
+              </p>
+              <p className="footer-subtitle">
+                {t.proprietorDesc}
+              </p>
+            </div>
+          </div>
+          <div className="footer-links">
+            <a
+              href={currentOrigin}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="footer-link-pill"
+              title={uiLang === "en" ? "Visit Official Website" : "অফিশিয়াল ওয়েবসাইট ভিজিট করুন"}
+            >
+              <span>🌐</span>
+              <span>{currentHostname}</span>
+            </a>
+            <a
+              href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                uiLang === "en"
+                  ? "Hello Digital Service Point, I need assistance with the DSP ePOS software."
+                : "আসসালামু আলাইকুম ডিজিটাল সার্ভিস পয়েন্ট, আমার DSP ePOS সফটওয়্যার সংক্রান্ত বিষয়ে সহযোগিতা প্রয়োজন।"
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="footer-link-pill footer-link-whatsapp"
+              title={uiLang === "en" ? "Contact Support on WhatsApp" : "হোয়াটসঅ্যাপে সরাসরি যোগাযোগ ও সহায়তা"}
+            >
+              <span>💬</span>
+              <span>{t.supportHelplineBtn}</span>
+            </a>
+          </div>
+        </div>
+      </footer>
 
       {/* ADMIN PIN UNLOCK MODAL */}
       {isAdminModalOpen && (

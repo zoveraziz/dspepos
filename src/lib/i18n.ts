@@ -192,6 +192,13 @@ export const translations = {
     trialFeature4: "মাসিক লাভ-ক্ষতি ও পাইকারি মাল ক্রয় খাতা",
     trialContactLabel: "সফটওয়্যার কিনতে চান বা ট্রায়াল সহায়তা প্রয়োজন?",
     trialBuyBtn: "লাইসেন্স নিতে যোগাযোগ করুন",
+
+    // Proprietor & Support
+    proprietorBadge: "ডিজিটাল সার্ভিস পয়েন্ট",
+    proprietorTitle: "ডিজিটাল সার্ভিস পয়েন্ট-এর একটি প্রোডাক্ট",
+    proprietorDesc: "স্বত্বাধিকারী ও প্রযুক্তিগত সহায়তায়: ডিজিটাল সার্ভিস পয়েন্ট • সর্বস্বত্ব সংরক্ষিত",
+    visitWebsiteBtn: "ওয়েবসাইট ভিজিট করুন",
+    supportHelplineBtn: "সহায়তা ও লাইসেন্স",
   },
   en: {
     // Header
@@ -321,5 +328,12 @@ export const translations = {
     trialFeature4: "Monthly profit/loss & stock purchase ledger",
     trialContactLabel: "Interested in purchasing or need trial support?",
     trialBuyBtn: "Inquire to Purchase",
+
+    // Proprietor & Support
+    proprietorBadge: "Digital Service Point",
+    proprietorTitle: "A Product of Digital Service Point",
+    proprietorDesc: "Proprietor & Technology Partner: Digital Service Point • All Rights Reserved",
+    visitWebsiteBtn: "Visit Website",
+    supportHelplineBtn: "Support & License",
   }
 };
