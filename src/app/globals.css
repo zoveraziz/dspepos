@@ -2493,6 +2493,91 @@ span.mobile-only {
   color: #10b981;
 }
 
+.footer-link-install {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.22) 0%, rgba(37, 99, 235, 0.3) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  color: #60a5fa;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.footer-link-install:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.35) 0%, rgba(37, 99, 235, 0.45) 100%);
+  border-color: #60a5fa;
+  color: #93c5fd;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+}
+
+.footer-link-install.installed {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+[data-theme="light"] .footer-link-install {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+[data-theme="light"] .footer-link-install:hover {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1e40af;
+}
+
+[data-theme="light"] .footer-link-install.installed {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #059669;
+}
+
+.install-guide-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin: 1rem 0;
+  text-align: left;
+}
+
+.install-guide-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+}
+
+[data-theme="light"] .install-guide-card {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.install-guide-card h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #38bdf8;
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+[data-theme="light"] .install-guide-card h4 {
+  color: #0284c7;
+}
+
+.install-guide-card ol {
+  padding-left: 1.2rem;
+  font-size: 0.82rem;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.install-guide-card li {
+  margin-bottom: 0.25rem;
+}
+
 [data-theme="light"] .app-footer {
   background-color: #ffffff;
   border-color: #e2e8f0;

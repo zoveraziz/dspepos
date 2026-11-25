@@ -1,9 +1,11 @@
 // ডিজিটাল সার্ভিস পয়েন্ট DSP ePOS Service Worker
-const CACHE_VERSION = "dsp-epos-v2.8.0";
+const CACHE_VERSION = "dsp-epos-v2.8.1";
 const PRECACHE_ASSETS = [
   "/",
   "/manifest.json",
   "/icon.svg",
+  "/icon-192.png",
+  "/icon-512.png",
   "/sqlite/sqlite3.wasm",
   "/sqlite/sqlite3-opfs-async-proxy.js"
 ];

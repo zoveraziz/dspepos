@@ -60,6 +60,11 @@ export default function ShowroomApp() {
   const [currentOrigin, setCurrentOrigin] = useState("https://dspepos.vercel.app");
   const [currentHostname, setCurrentHostname] = useState("dspepos.vercel.app");
 
+  // PWA Standalone App & Install Prompt State
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<any>(null);
+  const [isStandaloneApp, setIsStandaloneApp] = useState(false);
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+
   // Tab 2: Monthly Ledger Filters & Search State
   const [dateFilterPreset, setDateFilterPreset] = useState<"all" | "today" | "7days" | "month" | "custom">("all");
   const [customFromDate, setCustomFromDate] = useState<string>("");
@@ -159,6 +164,26 @@ export default function ShowroomApp() {
       if (typeof window !== "undefined") {
         setCurrentOrigin(window.location.origin);
         setCurrentHostname(window.location.host);
+
+        // Detect if running as standalone PWA app & listen for install prompt
+        const isStandalone =
+          window.matchMedia("(display-mode: standalone)").matches ||
+          (window.navigator as any).standalone === true ||
+          document.referrer.includes("android-app://");
+        setIsStandaloneApp(isStandalone);
+
+        const handleBeforeInstall = (e: Event) => {
+          e.preventDefault();
+          setDeferredInstallPrompt(e);
+        };
+
+        const handleAppInstalled = () => {
+          setIsStandaloneApp(true);
+          setDeferredInstallPrompt(null);
+        };
+
+        window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+        window.addEventListener("appinstalled", handleAppInstalled);
       }
 
       // Persistent Storage lock for zero-data-loss offline safety
@@ -180,6 +205,24 @@ export default function ShowroomApp() {
     try {
       localStorage.setItem("dsp_epos_theme", next);
     } catch {}
+  };
+
+  // PWA App Install Handler
+  const handleInstallClick = async () => {
+    if (deferredInstallPrompt) {
+      try {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        if (choice && choice.outcome === "accepted") {
+          setIsStandaloneApp(true);
+        }
+        setDeferredInstallPrompt(null);
+      } catch {
+        setIsInstallModalOpen(true);
+      }
+    } else {
+      setIsInstallModalOpen(true);
+    }
   };
 
   const toggleDigitMode = () => {
@@ -1147,6 +1190,26 @@ export default function ShowroomApp() {
                       </span>
                     </button>
                   </div>
+
+                  {/* PWA App Install on Mobile / POS */}
+                  <div className="pref-item" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "0.5rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPrefMenuOpen(false);
+                        handleInstallClick();
+                      }}
+                      className="pref-printer-btn"
+                      style={{ borderColor: "#3b82f6", color: "#60a5fa", background: "rgba(59,130,246,0.12)" }}
+                    >
+                      <span>📲</span>
+                      <span>
+                        {isStandaloneApp
+                          ? (uiLang === "en" ? "✓ App Installed" : "✓ অ্যাপ ইনস্টলড")
+                          : (uiLang === "en" ? "Install App on Phone/POS" : "মোবাইল/মেশিনে অ্যাপ ইনস্টল")}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1673,6 +1736,16 @@ export default function ShowroomApp() {
                     </a>
                   </div>
                 </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={handleInstallClick}
+                    className="footer-link-pill footer-link-install cursor-pointer"
+                    style={{ padding: "0.55rem 0.95rem", fontSize: "0.82rem" }}
+                    title={uiLang === "en" ? "Install as App on Mobile or POS Terminal" : "মোবাইল বা পিওএস মেশিনে অ্যাপ হিসেবে ইনস্টল করুন"}
+                  >
+                    <span>📲</span> <span>{isStandaloneApp ? (uiLang === "en" ? "App Installed" : "অ্যাপ ইনস্টলড") : (uiLang === "en" ? "Install App" : "অ্যাপ ইনস্টল")}</span>
+                  </button>
                 <a
                   href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
                     uiLang === "en"
@@ -1686,6 +1759,7 @@ export default function ShowroomApp() {
                 >
                   <span>💬</span> <span>{t.trialBuyBtn}</span>
                 </a>
+                </div>
               </div>
             </div>
 
@@ -1916,7 +1990,7 @@ export default function ShowroomApp() {
                         {t.syncCard3Title}
                       </h3>
                       <span className="sync-badge sync-badge-amber">
-                        v2.8.0
+                        v2.8.1
                       </span>
                     </div>
                     <p className="sync-card-desc" style={{ maxWidth: "560px", marginTop: "4px" }}>
@@ -1985,6 +2059,15 @@ export default function ShowroomApp() {
             </div>
           </div>
           <div className="footer-links">
+            <button
+              type="button"
+              onClick={handleInstallClick}
+              className={`footer-link-pill footer-link-install cursor-pointer ${isStandaloneApp ? "installed" : ""}`}
+              title={uiLang === "en" ? "Install as App on Mobile or POS Machine" : "মোবাইল বা পিওএস মেশিনে অ্যাপ হিসেবে ইনস্টল করুন"}
+            >
+              <span>📲</span>
+              <span>{isStandaloneApp ? (uiLang === "en" ? "App Installed" : "অ্যাপ ইনস্টলড") : (uiLang === "en" ? "Install App" : "অ্যাপ ইনস্টল")}</span>
+            </button>
             <a
               href={currentOrigin}
               target="_blank"
@@ -2012,6 +2095,91 @@ export default function ShowroomApp() {
           </div>
         </div>
       </footer>
+
+      {/* PWA APP INSTALL GUIDE MODAL */}
+      {isInstallModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsInstallModalOpen(false)}>
+          <div className="modal-card" style={{ maxWidth: "480px" }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <span style={{ fontSize: "1.5rem" }}>📲</span>
+                <div>
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#fff" }}>
+                    {t.installGuideTitle}
+                  </h3>
+                  <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                    {uiLang === "en"
+                      ? "Use DSP ePOS as a standalone mobile app on any smartphone or POS terminal"
+                      : "যেকোনো অ্যান্ড্রয়েড, আইফোন বা সানমি পিওএস মেশিনে ফুলস্ক্রিন মোবাইল অ্যাপ হিসেবে চালান"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsInstallModalOpen(false)}
+                className="modal-close-btn"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ marginTop: "1rem" }}>
+              {isStandaloneApp ? (
+                <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", borderRadius: "10px", padding: "1rem", color: "#34d399", textAlign: "center" }}>
+                  <p style={{ fontWeight: 700, fontSize: "1rem" }}>✓ {uiLang === "en" ? "App is already installed!" : "অ্যাপটি ইতিমধ্যে আপনার ডিভাইসে ইনস্টল করা আছে!"}</p>
+                  <p style={{ fontSize: "0.82rem", marginTop: "0.4rem", color: "var(--text-main)" }}>
+                    {uiLang === "en"
+                      ? "You can launch DSP ePOS directly from your home screen or app drawer in full-screen mobile view."
+                      : "আপনি মোবাইলের হোম স্ক্রিন বা অ্যাপ লিস্ট থেকে সরাসরি DSP ePOS ফুলস্ক্রিন মোবাইল অ্যাপ আকারে ওপেন করতে পারেন।"}
+                  </p>
+                </div>
+              ) : (
+                <div className="install-guide-steps">
+                  {deferredInstallPrompt && (
+                    <button
+                      type="button"
+                      onClick={handleInstallClick}
+                      className="btn-primary"
+                      style={{ width: "100%", padding: "0.75rem", backgroundColor: "#2563eb", fontWeight: 700, marginBottom: "0.5rem" }}
+                    >
+                      📲 {uiLang === "en" ? "Click Here to Install Now" : "এখনই ১-ক্লিকে ইনস্টল করুন"}
+                    </button>
+                  )}
+
+                  {/* Android & POS terminal instructions */}
+                  <div className="install-guide-card">
+                    <h4>📱 {uiLang === "en" ? "Android Phone & Handheld POS Terminal (SUNMI / Smart POS):" : "অ্যান্ড্রয়েড ফোন ও পিওএস মেশিন (SUNMI / স্মার্ট পিওএস):"}</h4>
+                    <ol>
+                      <li>{uiLang === "en" ? "Tap the 3-dot (⋮) menu at the top or bottom of Chrome/Browser." : "ব্রাউজারের ওপরে বা নিচে থাকা ৩-ডট (⋮) মেনুতে ট্যাপ করুন।"}</li>
+                      <li>{uiLang === "en" ? "Select \"Install app\" or \"Add to Home screen\"." : "\"Install app\" বা \"Add to Home screen\" (হোম স্ক্রিনে যোগ করুন) চাপুন।"}</li>
+                      <li>{uiLang === "en" ? "Confirm \"Install\". The DSP ePOS icon will appear on your home screen and open in standalone mobile view." : "\"Install\" চাপুন। সাথে সাথে আপনার স্ক্রিনে অ্যাপ আইকন তৈরি হবে এবং ফুলস্ক্রিন মোবাইল ভিউতে ওপেন হবে।"}</li>
+                    </ol>
+                  </div>
+
+                  {/* iPhone instructions */}
+                  <div className="install-guide-card">
+                    <h4>🍎 {uiLang === "en" ? "iPhone & iPad (Safari):" : "আইফোন ও আইপ্যাড (Safari ব্রাউজার):"}</h4>
+                    <ol>
+                      <li>{uiLang === "en" ? "Tap the Share (⬆️) button at the bottom of Safari." : "সাফারির নিচে থাকা শেয়ার (⬆️ Share) বাটনে ট্যাপ করুন।"}</li>
+                      <li>{uiLang === "en" ? "Scroll down and tap \"Add to Home Screen\"." : "নিচে স্ক্রল করে \"Add to Home Screen\" চাপুন।"}</li>
+                      <li>{uiLang === "en" ? "Tap \"Add\" in the top right corner." : "ওপরে ডানপাশে \"Add\" চাপলেই অ্যাপ ইনস্টল হয়ে যাবে।"}</li>
+                    </ol>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setIsInstallModalOpen(false)}
+                className="btn-secondary"
+                style={{ width: "100%", padding: "0.65rem", marginTop: "0.5rem" }}
+              >
+                {uiLang === "en" ? "Close" : "বুঝেছি / বন্ধ করুন"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ADMIN PIN UNLOCK MODAL */}
       {isAdminModalOpen && (

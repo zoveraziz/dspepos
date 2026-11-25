@@ -7,8 +7,14 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: "/icon.svg",
-    apple: "/icon.svg",
+    apple: "/icon-192.png",
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "DSP ePOS",
+  },
+  applicationName: "DSP ePOS",
 };
 
 export const viewport: Viewport = {
@@ -16,7 +22,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#0f172a",
+  viewportFit: "cover",
+  themeColor: "#0a0f1d",
 };
 
 export default function RootLayout({
@@ -28,8 +35,12 @@ export default function RootLayout({
     <html lang="bn" className="dark">
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="DSP ePOS" />
+        <meta name="application-name" content="DSP ePOS" />
+        <meta name="theme-color" content="#0a0f1d" />
       </head>
       <body>{children}</body>
     </html>

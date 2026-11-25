@@ -199,6 +199,13 @@ export const translations = {
     proprietorDesc: "স্বত্বাধিকারী ও প্রযুক্তিগত সহায়তায়: ডিজিটাল সার্ভিস পয়েন্ট • সর্বস্বত্ব সংরক্ষিত",
     visitWebsiteBtn: "ওয়েবসাইট ভিজিট করুন",
     supportHelplineBtn: "সহায়তা ও লাইসেন্স",
+
+    // PWA & App Install
+    installAppBtn: "অ্যাপ ইনস্টল",
+    installAppTitle: "মোবাইল বা পিওএস মেশিনে অ্যাপ ইনস্টল",
+    installAppDesc: "হোম স্ক্রিনে আইকন যুক্ত করে সরাসরি ফুলস্ক্রিন মোবাইল অ্যাপ হিসেবে চালান",
+    appInstalledBadge: "অ্যাপ ইনস্টলড",
+    installGuideTitle: "অ্যাপ ইনস্টল করার সহজ নিয়ম",
   },
   en: {
     // Header
@@ -335,5 +342,12 @@ export const translations = {
     proprietorDesc: "Proprietor & Technology Partner: Digital Service Point • All Rights Reserved",
     visitWebsiteBtn: "Visit Website",
     supportHelplineBtn: "Support & License",
+
+    // PWA & App Install
+    installAppBtn: "Install App",
+    installAppTitle: "Install on Mobile or POS Terminal",
+    installAppDesc: "Add icon to home screen and run as a standalone full-screen mobile app",
+    appInstalledBadge: "App Installed",
+    installGuideTitle: "Easy App Installation Guide",
   }
 };
